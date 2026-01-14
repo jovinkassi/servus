@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../models/service_category.dart';
+import 'search_results_page.dart'; // Add this import
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -13,10 +14,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final TextEditingController _issueController = TextEditingController();
-  bool _showResults = false;
-  String _suggestedCategory = '';
-  String _quickFix = '';
-  List<dynamic> _availableWorkers = [];
   bool _loading = false;
 
   final List<ServiceCategory> _categories = [
@@ -34,7 +31,6 @@ class _HomePageState extends State<HomePage> {
   Future<void> _classifyIssue(String description) async {
     setState(() {
       _loading = true;
-      _showResults = false;
     });
 
     try {
@@ -53,36 +49,66 @@ class _HomePageState extends State<HomePage> {
         final data = json.decode(response.body);
 
         setState(() {
-          _suggestedCategory = data['detected_category'] ?? 'General';
-          _quickFix = data['quick_fix'] ?? '';
-          _availableWorkers = data['available_workers'] ?? [];
-          _showResults = true;
           _loading = false;
         });
+
+        // Navigate to search results page
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SearchResultsPage(
+              searchQuery: description,
+              detectedCategory: data['detected_category'] ?? 'General',
+              quickFix: data['quick_fix'] ?? '',
+              workers: data['available_workers'] ?? [],
+            ),
+          ),
+        );
       } else {
         setState(() {
-          _suggestedCategory = 'Error: ${response.statusCode}';
-          _quickFix = '';
-          _availableWorkers = [];
-          _showResults = true;
           _loading = false;
         });
+
+        // Show error dialog
+        _showErrorDialog('Error: ${response.statusCode}');
       }
     } catch (e) {
       setState(() {
-        _suggestedCategory = 'Error: $e';
-        _quickFix = '';
-        _availableWorkers = [];
-        _showResults = true;
         _loading = false;
       });
+
+      // Show error dialog
+      _showErrorDialog('Error: $e');
     }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Connection Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _handleFindHelp() {
     print("Button pressed with text: ${_issueController.text}");
     if (_issueController.text.trim().isNotEmpty) {
       _classifyIssue(_issueController.text);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please describe your issue first'),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -260,12 +286,13 @@ class _HomePageState extends State<HomePage> {
             ),
             child: TextField(
               controller: _issueController,
-              decoration: InputDecoration(
-                hintText: 'e.g., The kitchen light won\'t turn on...',
-                hintStyle: const TextStyle(color: Colors.grey),
+              maxLines: 3,
+              decoration: const InputDecoration(
+                hintText:
+                    'e.g., The kitchen sink is leaking under the cabinet...',
+                hintStyle: TextStyle(color: Colors.grey),
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.all(16),
-                suffixIcon: const Icon(Icons.mic, color: Colors.grey),
+                contentPadding: EdgeInsets.all(16),
               ),
             ),
           ),
@@ -273,7 +300,7 @@ class _HomePageState extends State<HomePage> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _handleFindHelp,
+              onPressed: _loading ? null : _handleFindHelp,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2196F3),
                 padding: const EdgeInsets.symmetric(vertical: 16),
@@ -282,72 +309,32 @@ class _HomePageState extends State<HomePage> {
                 ),
                 elevation: 4,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.search, color: Colors.white),
-                  const SizedBox(width: 8),
-                  Text(
-                    _loading ? 'Analyzing...' : 'Find Help',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (_showResults) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8F5E9),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF81C784)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '✓ AI Detected: $_suggestedCategory service needed',
-                    style: const TextStyle(
-                      color: Color(0xFF2E7D32),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Quick Fix: $_quickFix',
-                    style: const TextStyle(
-                      color: Color(0xFF388E3C),
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (_availableWorkers.isNotEmpty)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Available Workers:',
+              child: _loading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.search, color: Colors.white),
+                        SizedBox(width: 8),
+                        Text(
+                          'Find Help',
                           style: TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.bold),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
-                        const SizedBox(height: 4),
-                        ..._availableWorkers.map((w) => Text(
-                              '- $w',
-                              style: const TextStyle(fontSize: 12),
-                            )),
                       ],
                     ),
-                ],
-              ),
             ),
-          ],
-          const SizedBox(height: 16),
+          ),
         ],
       ),
     );
