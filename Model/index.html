@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Service Marketplace</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            display: flex;
+            justify-content: center;
+            margin-top: 50px;
+        }
+        .container {
+            background: white;
+            padding: 25px;
+            width: 500px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px;
+            width: 100%;
+            background: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            background: #eef;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .worker {
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>AI Service Marketplace</h2>
+
+    <input type="text" id="problem" placeholder="Describe your problem (e.g., water leaking from pipe)">
+    <button onclick="analyzeProblem()">Search</button>
+
+    <div id="output" class="result" style="display:none;"></div>
+</div>
+
+<script>
+async function analyzeProblem() {
+    const problem = document.getElementById("problem").value;
+
+    if (!problem) {
+        alert("Please enter a problem");
+        return;
+    }
+
+    const response = await fetch("http://127.0.0.1:8000/analyze", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ problem: problem })
+    });
+
+    const data = await response.json();
+
+    let workersHTML = "";
+    data.available_workers.forEach(w => {
+        workersHTML += `<div class="worker">• ${w.name} (${w.location}) - ⭐ ${w.rating}</div>`;
+    });
+
+    document.getElementById("output").style.display = "block";
+    document.getElementById("output").innerHTML = `
+        <strong>Category:</strong> ${data.detected_category}<br><br>
+        <strong>Quick Fix:</strong> ${data.quick_fix}<br><br>
+        <strong>Available Workers:</strong><br>
+        ${workersHTML}
+    `;
+}
+</script>
+
+</body>
+</html>

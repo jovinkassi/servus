@@ -1,0 +1,486 @@
+text,category
+water leaking from pipe,plumber
+pipe burst in bathroom,plumber
+tap is dripping continuously,plumber
+sink is clogged,plumber
+water overflowing from tank,plumber
+leak under kitchen sink,plumber
+bathroom drainage blocked,plumber
+low water pressure in tap,plumber
+pipe cracked near wall,plumber
+toilet flush not working,plumber
+geyser not heating water,plumber
+water heater leaking,plumber
+shower head broken,plumber
+drain smell bad,plumber
+toilet seat broken,plumber
+washbasin tap loose,plumber
+no hot water coming,plumber
+bathroom tap making noise,plumber
+water tank overflow,plumber
+kitchen sink drainage slow,plumber
+toilet water continuously running,plumber
+pipe connection loose,plumber
+water coming from ceiling,plumber
+faucet handle broken,plumber
+bathtub drain blocked,plumber
+water meter reading wrong,plumber
+main water line problem,plumber
+garden tap not working,plumber
+water supply stopped,plumber
+bathroom floor always wet,plumber
+short circuit in house,electrician
+switch board sparking,electrician
+power outage in one room,electrician
+fan not working,electrician
+light flickering,electrician
+electric shock from switch,electrician
+wire burnt smell,electrician
+fuse blown frequently,electrician
+socket not working,electrician
+main power trip problem,electrician
+ceiling fan making noise,electrician
+light bulb keeps burning out,electrician
+dimmer switch not working,electrician
+chandelier installation needed,electrician
+electrical panel upgrade,electrician
+circuit breaker keeps tripping,electrician
+doorbell not ringing,electrician
+outdoor lights not working,electrician
+power surge issue,electrician
+emergency light not charging,electrician
+kitchen chimney wiring problem,electrician
+geyser switch sparking,electrician
+no power in entire house,electrician
+electric meter not working,electrician
+inverter installation required,electrician
+solar panel wiring needed,electrician
+generator connection required,electrician
+mcb replacement needed,electrician
+voltage fluctuation problem,electrician
+new light point installation,electrician
+extension board making noise,electrician
+electric motor not starting,electrician
+pump motor wiring issue,electrician
+kitchen socket overheating,electrician
+cctv camera installation,electrician
+ac not cooling properly,ac_technician
+air conditioner making noise,ac_technician
+ac leaking water,ac_technician
+ac remote not working,ac_technician
+ac not turning on,ac_technician
+split ac gas refill needed,ac_technician
+ac cooling very low,ac_technician
+ac compressor issue,ac_technician
+window ac problem,ac_technician
+ac showing error code,ac_technician
+ac blowing hot air,ac_technician
+ac ice formation,ac_technician
+ac drain pipe blocked,ac_technician
+ac thermostat not working,ac_technician
+split ac indoor unit problem,ac_technician
+ac outdoor unit not running,ac_technician
+ac making rattling sound,ac_technician
+ac filter cleaning required,ac_technician
+ac installation needed,ac_technician
+central ac not working,ac_technician
+cassette ac problem,ac_technician
+ductable ac issue,ac_technician
+ac pcb board problem,ac_technician
+ac capacitor replacement,ac_technician
+ac coil cleaning needed,ac_technician
+ac fan not rotating,ac_technician
+ac electrical fault,ac_technician
+ac servicing required,ac_technician
+ac uninstallation needed,ac_technician
+portable ac repair,ac_technician
+door hinge broken,carpenter
+wooden cupboard repair,carpenter
+table leg broken,carpenter
+door not closing properly,carpenter
+bed making noise,carpenter
+wooden chair repair,carpenter
+window frame damaged,carpenter
+furniture fitting required,carpenter
+drawer stuck problem,carpenter
+wardrobe repair needed,carpenter
+modular kitchen installation,carpenter
+false ceiling work,carpenter
+wooden partition required,carpenter
+door lock alignment,carpenter
+cabinet door hanging loose,carpenter
+wooden flooring work,carpenter
+bed headboard repair,carpenter
+dining table wobbling,carpenter
+bookshelf installation,carpenter
+wall panel fixing,carpenter
+cupboard handle broken,carpenter
+sliding door not moving,carpenter
+wooden staircase repair,carpenter
+shelf installation needed,carpenter
+study table repair,carpenter
+tv unit installation,carpenter
+wooden gate repair,carpenter
+shoe rack making,carpenter
+dressing table repair,carpenter
+kitchen cabinet door loose,carpenter
+wardrobe sliding issue,carpenter
+door frame replacement,carpenter
+wooden railing repair,carpenter
+furniture polish required,carpenter
+termite treatment for wood,carpenter
+washing machine not spinning,appliance_repair
+refrigerator not cooling,appliance_repair
+fridge making noise,appliance_repair
+microwave not heating,appliance_repair
+tv screen flickering,appliance_repair
+washing machine leaking water,appliance_repair
+mixer grinder not working,appliance_repair
+oven power issue,appliance_repair
+dishwasher not draining,appliance_repair
+refrigerator gas issue,appliance_repair
+washing machine drum stuck,appliance_repair
+fridge door seal broken,appliance_repair
+microwave turntable not rotating,appliance_repair
+tv no picture sound ok,appliance_repair
+washing machine making loud noise,appliance_repair
+water purifier not working,appliance_repair
+chimney suction low,appliance_repair
+induction cooktop not heating,appliance_repair
+coffee maker leaking,appliance_repair
+toaster not working,appliance_repair
+vacuum cleaner no suction,appliance_repair
+food processor blade stuck,appliance_repair
+electric kettle not boiling,appliance_repair
+iron box not heating,appliance_repair
+hair dryer stopped working,appliance_repair
+ceiling fan regulator problem,appliance_repair
+exhaust fan not working,appliance_repair
+cooler motor problem,appliance_repair
+heater not warming,appliance_repair
+blender jar cracked,appliance_repair
+juicer not extracting,appliance_repair
+rice cooker not cooking,appliance_repair
+electric grill not heating,appliance_repair
+freezer not freezing,appliance_repair
+oven door not closing,appliance_repair
+house painting required,painter
+wall paint peeling,painter
+room repaint needed,painter
+paint cracks on ceiling,painter
+office painting service,painter
+water stains on wall paint,painter
+exterior house painting,painter
+paint bubbles on wall,painter
+color fading on walls,painter
+paint touch up needed,painter
+new construction painting,painter
+interior wall painting,painter
+door paint chipping,painter
+ceiling color change,painter
+texture painting needed,painter
+stencil work required,painter
+kids room cartoon painting,painter
+bedroom makeover painting,painter
+living room accent wall,painter
+kitchen wall tiles grouting,painter
+bathroom waterproof painting,painter
+balcony railing painting,painter
+gate metal painting,painter
+fence painting required,painter
+wood furniture painting,painter
+wall preparation before paint,painter
+crack filling needed,painter
+ceiling water damage repair,painter
+asian paints work,painter
+oil paint to emulsion change,painter
+putty work required,painter
+wall primer application,painter
+painting after plastering,painter
+removing old wallpaper,painter
+spray painting service,painter
+house cleaning service needed,cleaning
+bathroom cleaning required,cleaning
+kitchen deep cleaning,cleaning
+sofa cleaning service,cleaning
+floor cleaning required,cleaning
+post construction cleaning,cleaning
+window cleaning service,cleaning
+carpet cleaning needed,cleaning
+office cleaning required,cleaning
+full house cleaning,cleaning
+balcony cleaning service,cleaning
+terrace cleaning needed,cleaning
+bathroom tiles scrubbing,cleaning
+kitchen chimney cleaning,cleaning
+refrigerator deep cleaning,cleaning
+curtain cleaning service,cleaning
+mattress cleaning required,cleaning
+ceiling fan cleaning,cleaning
+chandelier cleaning needed,cleaning
+AC duct cleaning,cleaning
+water tank cleaning service,cleaning
+overhead tank sanitization,cleaning
+garden maintenance cleaning,cleaning
+garage cleaning required,cleaning
+staircase cleaning needed,cleaning
+marble floor polishing,cleaning
+wooden floor cleaning,cleaning
+glass facade cleaning,cleaning
+bathroom deep sanitization,cleaning
+kitchen cabinet cleaning,cleaning
+car interior cleaning,cleaning
+move in cleaning service,cleaning
+move out cleaning service,cleaning
+party cleanup service,cleaning
+pest control cleaning after,cleaning
+laptop running very slow,computer_repair
+desktop not starting,computer_repair
+blue screen error windows,computer_repair
+laptop screen broken,computer_repair
+keyboard keys not working,computer_repair
+computer making beep sound,computer_repair
+laptop overheating problem,computer_repair
+hard disk not detected,computer_repair
+pc shutting down automatically,computer_repair
+laptop battery not charging,computer_repair
+computer virus removal,computer_repair
+laptop hinge broken,computer_repair
+monitor display problem,computer_repair
+motherboard repair needed,computer_repair
+ram upgrade required,computer_repair
+ssd installation needed,computer_repair
+graphics card not working,computer_repair
+laptop touchpad issue,computer_repair
+printer not printing,computer_repair
+scanner not working,computer_repair
+wifi adapter problem,computer_repair
+computer fan making noise,computer_repair
+bios settings problem,computer_repair
+operating system installation,computer_repair
+data recovery needed,computer_repair
+software installation help,computer_repair
+computer networking issue,computer_repair
+laptop dc jack loose,computer_repair
+smps not working,computer_repair
+cpu processor overheating,computer_repair
+computer peripheral setup,computer_repair
+usb port not working,computer_repair
+external hard disk repair,computer_repair
+webcam not detected,computer_repair
+audio jack not working,computer_repair
+roof leaking during rain,general_contractor
+wall crack repair,general_contractor
+ceiling plaster falling,general_contractor
+floor tiles broken,general_contractor
+bathroom waterproofing needed,general_contractor
+terrace waterproofing required,general_contractor
+balcony railing loose,general_contractor
+wall dampness problem,general_contractor
+ceiling water seepage,general_contractor
+house extension work,general_contractor
+room partition making,general_contractor
+false ceiling installation,general_contractor
+pop ceiling design,general_contractor
+gypsum board work,general_contractor
+wall plastering required,general_contractor
+floor leveling needed,general_contractor
+tile flooring work,general_contractor
+marble flooring installation,general_contractor
+bathroom renovation,general_contractor
+kitchen remodeling,general_contractor
+staircase construction,general_contractor
+boundary wall construction,general_contractor
+room addition work,general_contractor
+balcony expansion,general_contractor
+compound wall building,general_contractor
+masonry work required,general_contractor
+brickwork needed,general_contractor
+concrete slab work,general_contractor
+flooring demolition,general_contractor
+civil construction work,general_contractor
+building repair work,general_contractor
+structural repair needed,general_contractor
+beam crack repair,general_contractor
+column repair work,general_contractor
+foundation repair needed,general_contractor
+mobile screen broken,mobile_repair
+phone not charging,mobile_repair
+mobile battery draining fast,mobile_repair
+phone speaker not working,mobile_repair
+mobile hanging problem,mobile_repair
+phone back panel cracked,mobile_repair
+mobile camera not working,mobile_repair
+phone network problem,mobile_repair
+mobile heating issue,mobile_repair
+phone water damage,mobile_repair
+touchscreen not responding,mobile_repair
+mobile mic not working,mobile_repair
+phone wifi not connecting,mobile_repair
+mobile bluetooth issue,mobile_repair
+phone proximity sensor problem,mobile_repair
+mobile earpiece not working,mobile_repair
+phone power button stuck,mobile_repair
+mobile volume button broken,mobile_repair
+phone front camera blurry,mobile_repair
+mobile charging port loose,mobile_repair
+phone vibration not working,mobile_repair
+mobile sim card not detected,mobile_repair
+phone fingerprint sensor issue,mobile_repair
+mobile face unlock not working,mobile_repair
+phone software update problem,mobile_repair
+iphone screen replacement,mobile_repair
+android phone bootloop,mobile_repair
+mobile data not working,mobile_repair
+phone hotspot not working,mobile_repair
+mobile gps not accurate,mobile_repair
+phone app crashing,mobile_repair
+mobile storage full issue,mobile_repair
+phone performance slow,mobile_repair
+mobile backup needed,mobile_repair
+phone unlocking required,mobile_repair
+pesticides spray needed,pest_control
+cockroach infestation,pest_control
+rat problem in house,pest_control
+termite treatment required,pest_control
+bed bug removal,pest_control
+mosquito control needed,pest_control
+ant infestation problem,pest_control
+lizard control service,pest_control
+spider web removal,pest_control
+flies control required,pest_control
+general pest control,pest_control
+pre construction termite treatment,pest_control
+post construction anti termite,pest_control
+wood borer treatment,pest_control
+rodent control service,pest_control
+snake found in house,pest_control
+bee hive removal,pest_control
+wasp nest removal,pest_control
+moth control needed,pest_control
+silverfish problem,pest_control
+drain fly control,pest_control
+flea treatment for home,pest_control
+mite control service,pest_control
+beetle infestation,pest_control
+centipede problem,pest_control
+scorpion control needed,pest_control
+bird netting required,pest_control
+pigeon control service,pest_control
+bat removal needed,pest_control
+fumigation service required,pest_control
+kitchen pest control,pest_control
+warehouse pest control,pest_control
+restaurant pest control,pest_control
+hospital pest control,pest_control
+herbal pest control,pest_control
+gate automation required,home_automation
+smart lock installation,home_automation
+cctv setup needed,home_automation
+video door phone install,home_automation
+home theater setup,home_automation
+wifi router configuration,home_automation
+smart lighting system,home_automation
+voice control setup,home_automation
+security alarm installation,home_automation
+intercom system repair,home_automation
+automatic gate not working,home_automation
+smart thermostat install,home_automation
+motorized curtain setup,home_automation
+smart doorbell installation,home_automation
+home automation programming,home_automation
+motion sensor installation,home_automation
+smart plug setup,home_automation
+automated blinds install,home_automation
+access control system,home_automation
+biometric lock setup,home_automation
+solar panel installation,solar_technician
+solar water heater setup,solar_technician
+solar inverter problem,solar_technician
+solar battery replacement,solar_technician
+solar panel cleaning,solar_technician
+net metering installation,solar_technician
+solar system not generating,solar_technician
+solar charge controller issue,solar_technician
+grid tied solar setup,solar_technician
+off grid solar installation,solar_technician
+swimming pool cleaning,specialized_services
+swimming pool filter problem,specialized_services
+pool pump not working,specialized_services
+aquarium setup needed,specialized_services
+aquarium cleaning service,specialized_services
+garden landscaping required,specialized_services
+lawn mowing service,specialized_services
+tree trimming needed,specialized_services
+plant care service,specialized_services
+irrigation system setup,specialized_services
+water fountain installation,specialized_services
+fountain pump repair,specialized_services
+pond construction work,specialized_services
+garden lighting setup,specialized_services
+lawn maintenance needed,specialized_services
+gas pipeline installation,gas_technician
+gas leak detection,gas_technician
+gas stove not igniting,gas_technician
+lpg regulator problem,gas_technician
+gas cylinder connection,gas_technician
+gas pipe fitting required,gas_technician
+kitchen gas line repair,gas_technician
+gas valve replacement,gas_technician
+png gas meter reading,gas_technician
+gas safety check needed,gas_technician
+car not starting,automobile_mechanic
+car engine overheating,automobile_mechanic
+car battery dead,automobile_mechanic
+car brake problem,automobile_mechanic
+car ac not cooling,automobile_mechanic
+car tyre puncture,automobile_mechanic
+car oil change needed,automobile_mechanic
+car headlight not working,automobile_mechanic
+car making strange noise,automobile_mechanic
+car suspension problem,automobile_mechanic
+bike not starting,automobile_mechanic
+bike chain loose,automobile_mechanic
+bike brake adjustment,automobile_mechanic
+scooter starting problem,automobile_mechanic
+two wheeler servicing,automobile_mechanic
+vehicle electrical issue,automobile_mechanic
+car radiator leak,automobile_mechanic
+car clutch problem,automobile_mechanic
+car gear shifting hard,automobile_mechanic
+car wiper not working,automobile_mechanic
+lock and key service,locksmith
+key stuck in lock,locksmith
+door lock jammed,locksmith
+lost house keys,locksmith
+car key locked inside,locksmith
+locker not opening,locksmith
+digital lock problem,locksmith
+door handle broken,locksmith
+lock replacement needed,locksmith
+duplicate key making,locksmith
+safe box not opening,locksmith
+main door lock change,locksmith
+cupboard lock repair,locksmith
+gate lock problem,locksmith
+padlock key lost,locksmith
+glass work required,glazier
+window glass broken,glazier
+mirror installation needed,glazier
+shower glass door,glazier
+glass partition work,glazier
+glass railing installation,glazier
+glass table top required,glazier
+toughened glass fitting,glazier
+glass shelving work,glazier
+balcony glass enclosure,glazier
+welding work needed,welder
+metal gate repair,welder
+grill installation required,welder
+iron railing welding,welder
+metal fabrication work,welder
+steel structure work,welder
+window grill making,welder
+balcony safety grill,welder
+metal frame welding,welder
+iron gate making,welder

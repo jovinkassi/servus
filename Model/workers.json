@@ -1,0 +1,61 @@
+{
+  "plumber": [
+    {
+      "name": "Ramesh Plumbing Services",
+      "rating": 4.8,
+      "distance": "2 km"
+    },
+    {
+      "name": "AquaFix Solutions",
+      "rating": 4.5,
+      "distance": "3.1 km"
+    }
+  ],
+  "electrician": [
+    {
+      "name": "Spark Electricals",
+      "rating": 4.7,
+      "distance": "1.8 km"
+    },
+    {
+      "name": "PowerSafe Electricians",
+      "rating": 4.4,
+      "distance": "2.5 km"
+    }
+  ],
+  "ac_technician": [
+    {
+      "name": "CoolAir Services",
+      "rating": 4.6,
+      "distance": "2 km"
+    }
+  ],
+  "carpenter": [
+    {
+      "name": "WoodCraft Carpentry",
+      "rating": 4.5,
+      "distance": "3 km"
+    }
+  ],
+  "appliance_repair": [
+    {
+      "name": "HomeFix Appliances",
+      "rating": 4.6,
+      "distance": "2.2 km"
+    }
+  ],
+  "painter": [
+    {
+      "name": "ColorPro Painters",
+      "rating": 4.4,
+      "distance": "4 km"
+    }
+  ],
+  "cleaning": [
+    {
+      "name": "CleanHome Services",
+      "rating": 4.7,
+      "distance": "1.5 km"
+    }
+  ]
+}
