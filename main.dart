@@ -1,7 +1,7 @@
 // main.dart
 import 'package:flutter/material.dart';
-import 'pages/home_page.dart';
-import 'worker/screens/worker_dashboard.dart';
+import 'pages/home_page.dart'; // Customer app
+import 'worker/screens/worker_dashboard.dart'; // Worker app
 
 void main() {
   runApp(const ServusApp());
@@ -105,8 +105,7 @@ class RoleSelectionScreen extends StatelessWidget {
                       color: Colors.white,
                       textColor: Colors.black,
                       onTap: () {
-                        // Changed from pushReplacement to push
-                        Navigator.push(
+                        Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
                             builder: (context) => const HomePage(),
@@ -126,8 +125,8 @@ class RoleSelectionScreen extends StatelessWidget {
                       color: Colors.blue[900]!,
                       textColor: Colors.white,
                       onTap: () {
-                        // Changed from pushReplacement to push
-                        Navigator.push(
+                        // Navigate to Worker Dashboard
+                        Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
                             builder: (context) => const WorkerDashboard(),
