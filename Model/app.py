@@ -28,9 +28,11 @@ print("✅ Embeddings ready!")
 
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+gemini_model = genai.GenerativeModel("models/gemini-2.5-flash")
 
-
+models = genai.list_models()
+for m in models:
+    print(m)
 # -------------------------------
 # FastAPI app
 # -------------------------------
