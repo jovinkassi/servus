@@ -149,6 +149,96 @@ class FirestoreService {
     return updateBookingStatus(bookingId, 'cancelled');
   }
 
+  // Worker marks work as done (awaiting customer confirmation)
+  // Can also be used for testing from customer side
+  Future<bool> markWorkAsDone(String bookingId) async {
+    try {
+      await _db.collection('bookings').doc(bookingId).update({
+        'status': 'awaiting_confirmation',
+        'workCompletedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (e) {
+      print('Error marking work as done: $e');
+      return false;
+    }
+  }
+
+  // Customer confirms work completion and adds rating
+  Future<bool> confirmCompletionAndRate(
+    String bookingId,
+    String workerId,
+    double rating,
+    String? review,
+  ) async {
+    try {
+      // Update booking with completion and rating
+      await _db.collection('bookings').doc(bookingId).update({
+        'status': 'completed',
+        'rating': rating,
+        'review': review ?? '',
+        'completedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Update worker's aggregate rating
+      await _updateWorkerRating(workerId, rating);
+
+      return true;
+    } catch (e) {
+      print('Error confirming completion: $e');
+      return false;
+    }
+  }
+
+  // Update worker's aggregate rating
+  Future<void> _updateWorkerRating(String workerId, double newRating) async {
+    try {
+      final workerDoc = await _db.collection('workers').doc(workerId).get();
+      if (workerDoc.exists) {
+        final data = workerDoc.data()!;
+        final currentRating = (data['rating'] ?? 0.0).toDouble();
+        final totalRatings = (data['totalRatings'] ?? 0) as int;
+
+        // Calculate new average rating
+        final newTotalRatings = totalRatings + 1;
+        final newAverageRating =
+            ((currentRating * totalRatings) + newRating) / newTotalRatings;
+
+        await _db.collection('workers').doc(workerId).update({
+          'rating': double.parse(newAverageRating.toStringAsFixed(1)),
+          'totalRatings': newTotalRatings,
+        });
+      }
+    } catch (e) {
+      print('Error updating worker rating: $e');
+    }
+  }
+
+  // Get reviews for a worker
+  Future<List<Map<String, dynamic>>> getWorkerReviews(String workerId) async {
+    try {
+      final snapshot = await _db
+          .collection('bookings')
+          .where('workerId', isEqualTo: workerId)
+          .where('status', isEqualTo: 'completed')
+          .where('rating', isGreaterThan: 0)
+          .orderBy('rating')
+          .orderBy('completedAt', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    } catch (e) {
+      print('Error fetching worker reviews: $e');
+      return [];
+    }
+  }
+
   // Seed initial workers data (run once to populate Firestore)
   Future<void> seedWorkersData() async {
     final workersData = [
