@@ -1,6 +1,7 @@
 // pages/search_results_page.dart
 import 'package:flutter/material.dart';
 import 'booking_page.dart';
+import 'profile_page.dart';
 
 class SearchResultsPage extends StatefulWidget {
   final String searchQuery;
@@ -508,10 +509,19 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildNavItem(Icons.home_outlined, 'Home', false),
-              _buildNavItem(Icons.search, 'Search', true),
-              _buildNavItem(Icons.chat_bubble_outline, 'Messages', false),
-              _buildNavItem(Icons.person_outline, 'Profile', false),
+              _buildNavItem(Icons.home_outlined, 'Home', false, () {
+                Navigator.pop(context);
+              }),
+              _buildNavItem(Icons.search, 'Search', true, () {}),
+              _buildNavItem(Icons.chat_bubble_outline, 'Messages', false, () {}),
+              _buildNavItem(Icons.person_outline, 'Profile', false, () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProfilePage(),
+                  ),
+                );
+              }),
             ],
           ),
         ),
@@ -519,25 +529,28 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
     );
   }
 
-  Widget _buildNavItem(IconData icon, String label, bool isActive) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          color: isActive ? const Color(0xFF2196F3) : Colors.grey,
-          size: 28,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
+  Widget _buildNavItem(IconData icon, String label, bool isActive, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
             color: isActive ? const Color(0xFF2196F3) : Colors.grey,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+            size: 28,
           ),
-        ),
-      ],
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: isActive ? const Color(0xFF2196F3) : Colors.grey,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

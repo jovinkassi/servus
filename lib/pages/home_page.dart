@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../models/service_category.dart';
 import 'search_results_page.dart';
 import 'booking_history_page.dart';
+import 'profile_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -640,9 +641,9 @@ class _HomePageState extends State<HomePage> {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                        color: Colors.black.withAlpha(15),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
@@ -650,24 +651,25 @@ class _HomePageState extends State<HomePage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        width: 48,
-                        height: 48,
+                        width: 44,
+                        height: 44,
                         decoration: BoxDecoration(
-                          color: category.color.withOpacity(0.1),
+                          color: category.color.withAlpha(25),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
                           category.icon,
                           color: category.color,
-                          size: 28,
+                          size: 24,
                         ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         category.name,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[800],
                         ),
                       ),
                     ],
@@ -703,7 +705,14 @@ class _HomePageState extends State<HomePage> {
                 );
               }),
               _buildNavItem(Icons.chat_bubble_outline, 'Messages', false, null),
-              _buildNavItem(Icons.person_outline, 'Profile', false, null),
+              _buildNavItem(Icons.person_outline, 'Profile', false, () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProfilePage(),
+                  ),
+                );
+              }),
             ],
           ),
         ),

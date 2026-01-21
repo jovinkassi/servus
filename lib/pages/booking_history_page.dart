@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
+import 'profile_page.dart';
 
 class BookingHistoryPage extends StatefulWidget {
   const BookingHistoryPage({super.key});
@@ -127,7 +128,14 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
               }),
               _buildNavItem(Icons.calendar_today, 'Bookings', true, () {}),
               _buildNavItem(Icons.chat_bubble_outline, 'Chat', false, () {}),
-              _buildNavItem(Icons.person_outline, 'Profile', false, () {}),
+              _buildNavItem(Icons.person_outline, 'Profile', false, () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProfilePage(),
+                  ),
+                );
+              }),
             ],
           ),
         ),
