@@ -5,29 +5,48 @@ import 'worker_jobs.dart';
 import '../widgets/stats_card.dart';
 
 class WorkerDashboard extends StatefulWidget {
-  const WorkerDashboard({Key? key}) : super(key: key);
+  final String? workerId;
+
+  const WorkerDashboard({super.key, this.workerId});
 
   @override
-  _WorkerDashboardState createState() => _WorkerDashboardState();
+  State<WorkerDashboard> createState() => _WorkerDashboardState();
 }
 
 class _WorkerDashboardState extends State<WorkerDashboard> {
   final WorkerService _workerService = WorkerService();
   Map<String, dynamic> _stats = {};
+  Map<String, dynamic> _workerProfile = {};
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadStats();
+    // Set the worker ID if provided
+    if (widget.workerId != null) {
+      _workerService.setWorkerId(widget.workerId!);
+    }
+    _loadProfile();
   }
 
-  Future<void> _loadStats() async {
-    final stats = await _workerService.getWorkerStats();
+  Future<void> _loadProfile() async {
+    final profile = await _workerService.getWorkerProfile();
     setState(() {
-      _stats = stats;
+      _workerProfile = profile['worker'] ?? {};
+      _stats = profile['stats'] ?? {};
       _isLoading = false;
     });
+  }
+
+  String _formatCategory(dynamic category) {
+    if (category == null) return 'Professional';
+    String cat = category.toString();
+    // Convert snake_case to Title Case (e.g., "ac_technician" -> "AC Technician")
+    return cat.split('_').map((word) {
+      if (word.isEmpty) return '';
+      if (word.toLowerCase() == 'ac') return 'AC';
+      return word[0].toUpperCase() + word.substring(1);
+    }).join(' ');
   }
 
   @override
@@ -65,9 +84,9 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Hello, John!',
-                          style: TextStyle(
+                        Text(
+                          'Hello, ${_workerProfile['name'] ?? 'Worker'}!',
+                          style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -75,7 +94,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                         ),
                         const SizedBox(height: 5),
                         Text(
-                          'Plumber • ${_stats['total_jobs'] ?? 0} jobs completed',
+                          '${_formatCategory(_workerProfile['category'])} • ${_stats['completed_jobs'] ?? 0} jobs completed',
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.white.withOpacity(0.9),
@@ -181,7 +200,9 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const WorkerJobsScreen(),
+                                builder: (context) => WorkerJobsScreen(
+                                  workerId: _workerService.currentWorkerId,
+                                ),
                               ),
                             );
                           },

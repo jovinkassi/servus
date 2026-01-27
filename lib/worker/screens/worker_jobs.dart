@@ -4,7 +4,9 @@ import '../services/worker_service.dart';
 import '../widgets/job_card.dart';
 
 class WorkerJobsScreen extends StatefulWidget {
-  const WorkerJobsScreen({Key? key}) : super(key: key);
+  final String workerId;
+
+  const WorkerJobsScreen({Key? key, required this.workerId}) : super(key: key);
 
   @override
   _WorkerJobsScreenState createState() => _WorkerJobsScreenState();
@@ -19,11 +21,29 @@ class _WorkerJobsScreenState extends State<WorkerJobsScreen> {
   @override
   void initState() {
     super.initState();
+    // Set the worker ID so jobs are fetched for the correct worker
+    _workerService.setWorkerId(widget.workerId);
     _loadJobs();
   }
 
   Future<void> _loadJobs() async {
-    final jobs = await _workerService.getAvailableJobs();
+    setState(() => _isLoading = true);
+
+    List<Map<String, dynamic>> jobs;
+    switch (_selectedFilter) {
+      case 'Available':
+        jobs = await _workerService.getAvailableJobs();
+        break;
+      case 'Accepted':
+        jobs = await _workerService.getAcceptedJobs();
+        break;
+      case 'Completed':
+        jobs = await _workerService.getCompletedJobs();
+        break;
+      default:
+        jobs = await _workerService.getWorkerJobs();
+    }
+
     setState(() {
       _jobs = jobs;
       _isLoading = false;
@@ -46,7 +66,7 @@ class _WorkerJobsScreenState extends State<WorkerJobsScreen> {
 
   Future<void> _rejectJob(String jobId) async {
     final reason = await _showRejectDialog();
-    if (reason != null && reason.isNotEmpty) {
+    if (reason != null) {
       final success = await _workerService.rejectJob(jobId, reason);
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -54,6 +74,34 @@ class _WorkerJobsScreenState extends State<WorkerJobsScreen> {
         );
         _loadJobs();
       }
+    }
+  }
+
+  Future<void> _startJob(String jobId) async {
+    final success = await _workerService.startJob(jobId);
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Job started!')),
+      );
+      _loadJobs();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to start job')),
+      );
+    }
+  }
+
+  Future<void> _completeJob(String jobId) async {
+    final success = await _workerService.completeJob(jobId);
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Job completed!')),
+      );
+      _loadJobs();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to complete job')),
+      );
     }
   }
 
@@ -117,6 +165,7 @@ class _WorkerJobsScreenState extends State<WorkerJobsScreen> {
                         setState(() {
                           _selectedFilter = filter;
                         });
+                        _loadJobs();
                       },
                       backgroundColor: Colors.white,
                       selectedColor: const Color(0xFF2196F3),
@@ -165,6 +214,8 @@ class _WorkerJobsScreenState extends State<WorkerJobsScreen> {
                               job: job,
                               onAccept: () => _acceptJob(job['id']),
                               onReject: () => _rejectJob(job['id']),
+                              onStart: () => _startJob(job['id']),
+                              onComplete: () => _completeJob(job['id']),
                             );
                           },
                         ),

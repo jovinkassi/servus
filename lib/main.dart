@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'pages/home_page.dart';
-import 'worker/screens/worker_dashboard.dart';
+import 'worker/screens/worker_login.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -132,11 +132,10 @@ class RoleSelectionScreen extends StatelessWidget {
                       color: Colors.blue[900]!,
                       textColor: Colors.white,
                       onTap: () {
-                        // Changed from pushReplacement to push
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const WorkerDashboard(),
+                            builder: (context) => const WorkerLoginScreen(),
                           ),
                         );
                       },

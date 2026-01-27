@@ -742,6 +742,18 @@ class _BookingPageState extends State<BookingPage> {
   Future<void> _confirmBooking() async {
     if (_isBooking) return;
 
+    // Get worker ID - this is critical for the booking to appear in worker's dashboard
+    final workerId = widget.worker['id']?.toString() ?? '';
+
+    // Debug: Print worker data to verify ID is present
+    print('DEBUG: Booking worker with data: ${widget.worker}');
+    print('DEBUG: Worker ID being used: $workerId');
+
+    if (workerId.isEmpty) {
+      _showErrorSnackbar('Error: Worker ID is missing. Cannot create booking.');
+      return;
+    }
+
     setState(() {
       _isBooking = true;
     });
@@ -755,7 +767,7 @@ class _BookingPageState extends State<BookingPage> {
 
     // Prepare booking data
     final bookingData = {
-      'workerId': widget.worker['id'] ?? '',
+      'workerId': workerId,
       'workerName': workerName,
       'workerCategory': widget.detectedCategory,
       'customerQuery': widget.searchQuery,
@@ -765,6 +777,8 @@ class _BookingPageState extends State<BookingPage> {
       'hourlyRate': widget.worker['hourly_rate'] ?? widget.worker['rate'] ?? 0,
       'status': 'pending',
     };
+
+    print('DEBUG: Creating booking with data: $bookingData');
 
     try {
       // Save booking to Firestore

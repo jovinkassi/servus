@@ -302,6 +302,238 @@ async def seed_workers():
         return {"error": str(e), "seeded": False}
 
 # -------------------------------
+# Worker Endpoints
+# -------------------------------
+
+class WorkerRegistrationInput(BaseModel):
+    name: str
+    phone: str
+    location: str
+    category: str
+    experience: str
+    hourly_rate: float
+
+class JobActionInput(BaseModel):
+    job_id: str
+    action: str  # 'accept' or 'reject'
+    reason: str = ""
+
+@app.post("/worker/register")
+async def register_worker(worker_input: WorkerRegistrationInput):
+    """Register a new worker"""
+    try:
+        # Check if phone number already exists
+        existing = db.collection('workers').where('phone', '==', worker_input.phone).limit(1).get()
+        if len(existing) > 0:
+            return {"success": False, "error": "Phone number already registered"}
+
+        # Create worker document
+        worker_data = {
+            "name": worker_input.name,
+            "phone": worker_input.phone,
+            "location": worker_input.location,
+            "category": worker_input.category,
+            "experience": worker_input.experience,
+            "hourly_rate": worker_input.hourly_rate,
+            "rating": 0,
+            "verified": False,
+            "createdAt": firestore.SERVER_TIMESTAMP
+        }
+
+        # Add to Firestore
+        doc_ref = db.collection('workers').add(worker_data)
+        worker_id = doc_ref[1].id
+
+        print(f"✅ New worker registered: {worker_input.name} ({worker_id})")
+
+        return {
+            "success": True,
+            "worker_id": worker_id,
+            "message": "Worker registered successfully"
+        }
+    except Exception as e:
+        print(f"❌ Error registering worker: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/worker/login")
+async def login_worker(phone: str):
+    """Login worker by phone number"""
+    try:
+        workers = db.collection('workers').where('phone', '==', phone).limit(1).get()
+
+        if len(workers) == 0:
+            return {"success": False, "error": "Worker not found", "registered": False}
+
+        worker_doc = workers[0]
+        worker_data = worker_doc.to_dict()
+        worker_data['id'] = worker_doc.id
+
+        return {
+            "success": True,
+            "registered": True,
+            "worker_id": worker_doc.id,
+            "worker": worker_data
+        }
+    except Exception as e:
+        print(f"❌ Error logging in worker: {e}")
+        return {"success": False, "error": str(e)}
+
+@app.get("/worker/{worker_id}/profile")
+async def get_worker_profile(worker_id: str):
+    """Get worker profile and stats from Firestore"""
+    try:
+        # Get worker document
+        worker_doc = db.collection('workers').document(worker_id).get()
+
+        if not worker_doc.exists:
+            return {"success": False, "error": "Worker not found"}
+
+        worker_data = worker_doc.to_dict()
+        worker_data['id'] = worker_id
+
+        # Get worker's bookings to calculate stats
+        bookings_ref = db.collection('bookings').where('workerId', '==', worker_id)
+        bookings = list(bookings_ref.stream())
+
+        # Calculate stats
+        total_jobs = len(bookings)
+        completed_jobs = len([b for b in bookings if b.to_dict().get('status') == 'completed'])
+        pending_jobs = len([b for b in bookings if b.to_dict().get('status') == 'pending'])
+        active_jobs = len([b for b in bookings if b.to_dict().get('status') in ['accepted', 'in_progress']])
+
+        # Calculate total earnings from completed jobs
+        total_earnings = sum(
+            b.to_dict().get('totalPrice', 0)
+            for b in bookings
+            if b.to_dict().get('status') == 'completed'
+        )
+
+        # Calculate average rating from completed bookings with ratings
+        ratings = [b.to_dict().get('rating', 0) for b in bookings if b.to_dict().get('rating', 0) > 0]
+        avg_rating = sum(ratings) / len(ratings) if ratings else worker_data.get('rating', 0)
+
+        return {
+            "success": True,
+            "worker": worker_data,
+            "stats": {
+                "total_jobs": total_jobs,
+                "completed_jobs": completed_jobs,
+                "pending_jobs": pending_jobs,
+                "active_jobs": active_jobs,
+                "total_earnings": total_earnings,
+                "rating": round(avg_rating, 1)
+            }
+        }
+    except Exception as e:
+        print(f"❌ Error fetching worker profile: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/worker/{worker_id}/jobs")
+async def get_worker_jobs(worker_id: str, status: str = None):
+    """Get jobs/bookings for a worker, optionally filtered by status"""
+    try:
+        # Query bookings for this worker
+        bookings_ref = db.collection('bookings').where('workerId', '==', worker_id)
+
+        bookings = []
+        for doc in bookings_ref.stream():
+            booking_data = doc.to_dict()
+            booking_data['id'] = doc.id
+
+            # Filter by status if provided
+            if status:
+                if booking_data.get('status') == status:
+                    bookings.append(booking_data)
+            else:
+                bookings.append(booking_data)
+
+        # Sort by createdAt (most recent first)
+        bookings.sort(key=lambda x: x.get('createdAt', ''), reverse=True)
+
+        return {
+            "success": True,
+            "jobs": bookings,
+            "count": len(bookings)
+        }
+    except Exception as e:
+        print(f"❌ Error fetching worker jobs: {e}")
+        return {"success": False, "error": str(e), "jobs": []}
+
+
+@app.post("/worker/{worker_id}/job-action")
+async def worker_job_action(worker_id: str, action_input: JobActionInput):
+    """Accept or reject a job"""
+    try:
+        job_id = action_input.job_id
+        action = action_input.action
+
+        # Get the booking document
+        booking_ref = db.collection('bookings').document(job_id)
+        booking_doc = booking_ref.get()
+
+        if not booking_doc.exists:
+            return {"success": False, "error": "Booking not found"}
+
+        booking_data = booking_doc.to_dict()
+
+        # Verify this booking belongs to this worker
+        if booking_data.get('workerId') != worker_id:
+            return {"success": False, "error": "Unauthorized - booking belongs to different worker"}
+
+        if action == 'accept':
+            booking_ref.update({
+                'status': 'accepted',
+                'acceptedAt': firestore.SERVER_TIMESTAMP
+            })
+            return {"success": True, "message": "Job accepted successfully"}
+
+        elif action == 'reject':
+            booking_ref.update({
+                'status': 'rejected',
+                'rejectedAt': firestore.SERVER_TIMESTAMP,
+                'rejectionReason': action_input.reason
+            })
+            return {"success": True, "message": "Job rejected"}
+
+        elif action == 'complete':
+            booking_ref.update({
+                'status': 'completed',
+                'completedAt': firestore.SERVER_TIMESTAMP
+            })
+            return {"success": True, "message": "Job marked as completed"}
+
+        elif action == 'start':
+            booking_ref.update({
+                'status': 'in_progress',
+                'startedAt': firestore.SERVER_TIMESTAMP
+            })
+            return {"success": True, "message": "Job started"}
+
+        else:
+            return {"success": False, "error": f"Unknown action: {action}"}
+
+    except Exception as e:
+        print(f"❌ Error processing job action: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/workers/category/{category}")
+async def get_workers_by_category(category: str):
+    """Get all workers in a specific category"""
+    try:
+        workers = get_workers_from_firestore(category)
+        return {
+            "success": True,
+            "workers": workers,
+            "count": len(workers)
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e), "workers": []}
+
+
+# -------------------------------
 # Root
 # -------------------------------
 @app.get("/")
