@@ -2,6 +2,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Notification data model
 class AppNotification {
@@ -35,6 +37,18 @@ class AppNotification {
       read: data['read'] ?? false,
     );
   }
+
+  factory AppNotification.fromFCM(RemoteMessage message) {
+    return AppNotification(
+      id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      title: message.notification?.title ?? '',
+      body: message.notification?.body ?? '',
+      type: message.data['type'] ?? '',
+      jobId: message.data['jobId'],
+      createdAt: DateTime.now(),
+      read: false,
+    );
+  }
 }
 
 /// Callback type for new notifications
@@ -46,6 +60,10 @@ class NotificationService {
   NotificationService._internal();
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  // FCM instance (only used on mobile)
+  FirebaseMessaging? _fcm;
+  FlutterLocalNotificationsPlugin? _localNotifications;
 
   String? _currentUserId;
   String? _currentUserType;
@@ -60,12 +78,129 @@ class NotificationService {
 
   /// Initialize the notification service
   Future<void> initialize() async {
-    if (kDebugMode) {
-      print('NotificationService initialized');
-      if (kIsWeb) {
-        print('Running on web - using Firestore-based notifications');
+    if (kIsWeb) {
+      // WEB: Use Firestore-based notifications
+      if (kDebugMode) {
+        print('🌐 Web platform - using Firestore-based notifications');
       }
+    } else {
+      // MOBILE: Use Firebase Cloud Messaging
+      if (kDebugMode) {
+        print('📱 Mobile platform - using FCM notifications');
+      }
+      await _initializeFCM();
     }
+  }
+
+  /// Initialize FCM for mobile platforms
+  Future<void> _initializeFCM() async {
+    _fcm = FirebaseMessaging.instance;
+    _localNotifications = FlutterLocalNotificationsPlugin();
+
+    // Request permission
+    NotificationSettings settings = await _fcm!.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      provisional: false,
+    );
+
+    if (kDebugMode) {
+      print('FCM Permission status: ${settings.authorizationStatus}');
+    }
+
+    // Initialize local notifications for foreground display
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
+
+    await _localNotifications!.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: _onNotificationTapped,
+    );
+
+    // Create high importance channel for Android
+    const channel = AndroidNotificationChannel(
+      'servus_notifications',
+      'Servus Notifications',
+      description: 'Notifications for job updates',
+      importance: Importance.high,
+    );
+
+    await _localNotifications!
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
+
+    // Handle foreground messages
+    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+
+    // Handle when user taps notification (app in background)
+    FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationOpen);
+
+    // Check if app was opened from notification (app was terminated)
+    RemoteMessage? initialMessage = await _fcm!.getInitialMessage();
+    if (initialMessage != null) {
+      _handleNotificationOpen(initialMessage);
+    }
+  }
+
+  /// Handle foreground FCM message (show local notification)
+  void _handleForegroundMessage(RemoteMessage message) {
+    if (kDebugMode) {
+      print('📩 Foreground FCM message: ${message.notification?.title}');
+    }
+
+    // Show local notification
+    _localNotifications?.show(
+      message.hashCode,
+      message.notification?.title ?? 'Notification',
+      message.notification?.body ?? '',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'servus_notifications',
+          'Servus Notifications',
+          importance: Importance.high,
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      payload: message.data['jobId'],
+    );
+
+    // Also notify in-app listeners
+    final notification = AppNotification.fromFCM(message);
+    for (final listener in _listeners) {
+      listener(notification);
+    }
+  }
+
+  /// Handle notification tap (app in background)
+  void _handleNotificationOpen(RemoteMessage message) {
+    if (kDebugMode) {
+      print('🔔 Notification opened: ${message.data}');
+    }
+    // TODO: Navigate to relevant screen based on message.data
+  }
+
+  /// Handle local notification tap
+  void _onNotificationTapped(NotificationResponse response) {
+    if (kDebugMode) {
+      print('🔔 Local notification tapped: ${response.payload}');
+    }
+    // TODO: Navigate to relevant screen based on payload
   }
 
   /// Register user/worker for notifications
@@ -76,11 +211,52 @@ class NotificationService {
     _currentUserId = userId;
     _currentUserType = userType;
 
-    // Start listening for notifications
-    _startListeningForNotifications();
+    if (kIsWeb) {
+      // WEB: Just listen to Firestore
+      _startListeningForNotifications();
+    } else {
+      // MOBILE: Get FCM token and save to Firestore, plus listen to Firestore
+      await _saveFCMToken(userId, userType);
+      _startListeningForNotifications(); // Also listen for in-app display
+    }
 
     if (kDebugMode) {
       print('Registered for notifications: $userType - $userId');
+    }
+  }
+
+  /// Save FCM token to Firestore (for mobile)
+  Future<void> _saveFCMToken(String userId, String userType) async {
+    if (_fcm == null) return;
+
+    try {
+      String? token = await _fcm!.getToken();
+      if (token != null) {
+        final collection = userType == 'worker' ? 'workers' : 'customers';
+        await _db.collection(collection).doc(userId).update({
+          'fcmToken': token,
+          'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
+        });
+        if (kDebugMode) {
+          print('📱 FCM token saved for $userType: ${token.substring(0, 20)}...');
+        }
+      }
+
+      // Listen for token refresh
+      _fcm!.onTokenRefresh.listen((newToken) async {
+        final collection = userType == 'worker' ? 'workers' : 'customers';
+        await _db.collection(collection).doc(userId).update({
+          'fcmToken': newToken,
+          'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
+        });
+        if (kDebugMode) {
+          print('📱 FCM token refreshed');
+        }
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error saving FCM token: $e');
+      }
     }
   }
 
@@ -229,10 +405,11 @@ class NotificationService {
   }
 }
 
-/// Background message handler placeholder (needed for mobile)
+/// Background message handler (required for mobile - must be top-level function)
 @pragma('vm:entry-point')
-Future<void> firebaseMessagingBackgroundHandler(dynamic message) async {
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   if (kDebugMode) {
-    print('Background message received');
+    print('📩 Background FCM message: ${message.notification?.title}');
   }
+  // Note: Can't show UI here, but can update local storage/database
 }
