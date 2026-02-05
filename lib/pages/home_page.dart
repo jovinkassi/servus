@@ -10,6 +10,7 @@ import '../worker/widgets/notification_overlay.dart';
 import 'search_results_page.dart';
 import 'booking_history_page.dart';
 import 'profile_page.dart';
+import 'nearby_workers_map_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -540,7 +541,14 @@ class _HomePageState extends State<HomePage> {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NearbyWorkersMapPage(),
+                    ),
+                  );
+                },
                 child: const Text('View Map'),
               ),
             ],

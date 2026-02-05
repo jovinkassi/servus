@@ -55,6 +55,18 @@
   </script>
   <!-- This script adds the flutter initialization JS code -->
   <script src="flutter.js" defer></script>
+
+  <!-- Environment variables (not committed to git) -->
+  <script src="env.js"></script>
+
+  <!-- Google Maps API - loaded dynamically with key from env.js -->
+  <script>
+    (function() {
+      var script = document.createElement('script');
+      script.src = 'https://maps.googleapis.com/maps/api/js?key=' + (window.ENV ? window.ENV.GOOGLE_MAPS_API_KEY : '') + '&libraries=places';
+      document.head.appendChild(script);
+    })();
+  </script>
 </head>
 <body>
   <script>

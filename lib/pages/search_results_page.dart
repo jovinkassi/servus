@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'booking_page.dart';
 import 'profile_page.dart';
+import 'nearby_workers_map_page.dart';
 
 class SearchResultsPage extends StatefulWidget {
   final String searchQuery;
@@ -128,7 +129,16 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                 ),
                 TextButton.icon(
                   onPressed: () {
-                    // Open map view
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => NearbyWorkersMapPage(
+                          workers: widget.workers,
+                          searchQuery: widget.searchQuery,
+                          detectedCategory: widget.detectedCategory,
+                        ),
+                      ),
+                    );
                   },
                   icon: const Icon(Icons.map, size: 18),
                   label: const Text('Map View'),

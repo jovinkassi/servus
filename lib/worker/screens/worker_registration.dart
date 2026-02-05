@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'worker_dashboard.dart';
 import '../../services/notification_service.dart';
+import '../../widgets/location_picker.dart';
 
 class WorkerRegistrationScreen extends StatefulWidget {
   const WorkerRegistrationScreen({Key? key}) : super(key: key);
@@ -24,6 +25,10 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
   final _locationController = TextEditingController();
   final _experienceController = TextEditingController();
   final _hourlyRateController = TextEditingController();
+
+  // Location coordinates
+  double? _latitude;
+  double? _longitude;
 
   String _selectedCategory = 'plumber';
 
@@ -86,6 +91,8 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
           'name': _nameController.text.trim(),
           'phone': _phoneController.text.trim(),
           'location': _locationController.text.trim(),
+          'latitude': _latitude,
+          'longitude': _longitude,
           'category': _selectedCategory,
           'experience': _experienceController.text.trim(),
           'hourly_rate': double.tryParse(_hourlyRateController.text) ?? 0,
@@ -406,16 +413,14 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
           },
         ),
         const SizedBox(height: 20),
-        _buildTextField(
-          controller: _locationController,
-          label: 'City / Location',
-          hint: 'Where are you based?',
-          icon: Icons.location_on_outlined,
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Please enter your location';
-            }
-            return null;
+        LocationPicker(
+          initialAddress: _locationController.text.isNotEmpty ? _locationController.text : null,
+          onLocationSelected: (address, lat, lng) {
+            setState(() {
+              _locationController.text = address;
+              _latitude = lat;
+              _longitude = lng;
+            });
           },
         ),
       ],
@@ -714,9 +719,12 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
   void _handleNext() {
     if (_currentStep == 0) {
       if (_nameController.text.trim().isEmpty ||
-          _phoneController.text.trim().isEmpty ||
-          _locationController.text.trim().isEmpty) {
+          _phoneController.text.trim().isEmpty) {
         _showSnackBar('Please fill in all fields', isError: true);
+        return;
+      }
+      if (_locationController.text.trim().isEmpty || _latitude == null || _longitude == null) {
+        _showSnackBar('Please select your location', isError: true);
         return;
       }
       setState(() => _currentStep++);

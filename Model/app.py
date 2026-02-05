@@ -309,6 +309,8 @@ class WorkerRegistrationInput(BaseModel):
     name: str
     phone: str
     location: str
+    latitude: float = None
+    longitude: float = None
     category: str
     experience: str
     hourly_rate: float
@@ -422,6 +424,8 @@ async def register_worker(worker_input: WorkerRegistrationInput):
             "name": worker_input.name,
             "phone": worker_input.phone,
             "location": worker_input.location,
+            "latitude": worker_input.latitude,
+            "longitude": worker_input.longitude,
             "category": worker_input.category,
             "experience": worker_input.experience,
             "hourly_rate": worker_input.hourly_rate,
@@ -665,6 +669,89 @@ async def notify_new_booking(input: BookingNotificationInput):
         print(f"❌ Error in notify_new_booking: {e}")
         return {"success": False, "error": str(e)}
 
+
+# -------------------------------
+# Nearby Workers Endpoint
+# -------------------------------
+import math
+
+def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Calculate distance between two coordinates using Haversine formula (returns km)"""
+    R = 6371  # Earth's radius in km
+
+    lat1_rad = math.radians(lat1)
+    lat2_rad = math.radians(lat2)
+    delta_lat = math.radians(lat2 - lat1)
+    delta_lon = math.radians(lon2 - lon1)
+
+    a = math.sin(delta_lat/2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(delta_lon/2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+
+    return R * c
+
+@app.get("/workers/nearby")
+async def get_nearby_workers(lat: float = None, lng: float = None, radius: float = 50, category: str = None):
+    """Get all workers with location data, optionally filtered by distance and category"""
+    try:
+        # Build query
+        if category:
+            workers_ref = db.collection('workers').where('category', '==', category)
+        else:
+            workers_ref = db.collection('workers')
+
+        docs = workers_ref.stream()
+
+        workers = []
+        for doc in docs:
+            worker_data = doc.to_dict()
+            worker_data['id'] = doc.id
+
+            # Calculate distance if user location provided
+            if lat is not None and lng is not None:
+                worker_lat = worker_data.get('latitude')
+                worker_lng = worker_data.get('longitude')
+
+                if worker_lat is not None and worker_lng is not None:
+                    distance = calculate_distance(lat, lng, worker_lat, worker_lng)
+                    worker_data['distance'] = f"{distance:.1f} km"
+                    worker_data['distance_km'] = distance
+
+                    # Only include workers within radius
+                    if distance > radius:
+                        continue
+                else:
+                    # Worker has no location, include with unknown distance
+                    worker_data['distance'] = "Unknown"
+                    worker_data['distance_km'] = 999
+            else:
+                # No user location provided, include all workers
+                worker_data['distance'] = "N/A"
+                worker_data['distance_km'] = 0
+
+            workers.append(worker_data)
+
+        # Sort by distance
+        workers.sort(key=lambda x: x.get('distance_km', 999))
+
+        print(f"✅ Found {len(workers)} nearby workers")
+        return {
+            "success": True,
+            "workers": workers,
+            "count": len(workers)
+        }
+    except Exception as e:
+        print(f"❌ Error fetching nearby workers: {e}")
+        return {"success": False, "error": str(e), "workers": []}
+
+
+# -------------------------------
+# Config Endpoint (for Flutter app to get API keys)
+# -------------------------------
+@app.get("/config/maps-api-key")
+def get_maps_api_key():
+    """Return Google Maps API key for Flutter app"""
+    api_key = os.getenv("GOOGLE_MAPS_API_KEY", "")
+    return {"api_key": api_key}
 
 # -------------------------------
 # Root
