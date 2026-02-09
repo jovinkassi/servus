@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/firestore_service.dart';
 import 'profile_page.dart';
 
@@ -34,7 +35,12 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
       _isLoading = true;
     });
 
-    final bookings = await _firestoreService.getAllBookings();
+    final prefs = await SharedPreferences.getInstance();
+    final customerId = prefs.getString('customer_id');
+
+    final bookings = customerId != null
+        ? await _firestoreService.getBookingsByCustomer(customerId)
+        : <Map<String, dynamic>>[];
 
     setState(() {
       _allBookings = bookings;

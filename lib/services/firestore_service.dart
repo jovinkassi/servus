@@ -130,6 +130,37 @@ class FirestoreService {
     }
   }
 
+  // Get bookings for a specific customer
+  Future<List<Map<String, dynamic>>> getBookingsByCustomer(String customerId) async {
+    try {
+      final snapshot = await _db
+          .collection('bookings')
+          .where('customerId', isEqualTo: customerId)
+          .get();
+
+      final bookings = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+
+      // Sort client-side (avoids needing a Firestore composite index)
+      bookings.sort((a, b) {
+        final aTime = a['createdAt'];
+        final bTime = b['createdAt'];
+        if (aTime == null && bTime == null) return 0;
+        if (aTime == null) return 1;
+        if (bTime == null) return -1;
+        return bTime.compareTo(aTime);
+      });
+
+      return bookings;
+    } catch (e) {
+      print('Error fetching customer bookings: $e');
+      return [];
+    }
+  }
+
   // Update booking status
   Future<bool> updateBookingStatus(String bookingId, String status) async {
     try {
