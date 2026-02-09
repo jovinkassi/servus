@@ -32,19 +32,22 @@
   <title>servus</title>
   <link rel="manifest" href="manifest.json">
 
+  <!-- Environment variables (not committed to git) - must load first -->
+  <script src="env.js"></script>
+
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
   <script>
-    // Initialize Firebase
+    // Initialize Firebase using keys from env.js
     const firebaseConfig = {
-      apiKey: "AIzaSyB0_r7RfUQW9Dnt8sUsOqjv7_NBVow_Yx4",
-      authDomain: "servus-43e5f.firebaseapp.com",
-      projectId: "servus-43e5f",
-      storageBucket: "servus-43e5f.firebasestorage.app",
-      messagingSenderId: "183908441320",
-      appId: "1:183908441320:web:67013c4820c1628fe5bd5d",
-      measurementId: "G-CZ1R9HHRW3"
+      apiKey: window.ENV ? window.ENV.FIREBASE_API_KEY : '',
+      authDomain: window.ENV ? window.ENV.FIREBASE_AUTH_DOMAIN : '',
+      projectId: window.ENV ? window.ENV.FIREBASE_PROJECT_ID : '',
+      storageBucket: window.ENV ? window.ENV.FIREBASE_STORAGE_BUCKET : '',
+      messagingSenderId: window.ENV ? window.ENV.FIREBASE_MESSAGING_SENDER_ID : '',
+      appId: window.ENV ? window.ENV.FIREBASE_APP_ID : '',
+      measurementId: window.ENV ? window.ENV.FIREBASE_MEASUREMENT_ID : ''
     };
     firebase.initializeApp(firebaseConfig);
   </script>
@@ -55,9 +58,6 @@
   </script>
   <!-- This script adds the flutter initialization JS code -->
   <script src="flutter.js" defer></script>
-
-  <!-- Environment variables (not committed to git) -->
-  <script src="env.js"></script>
 
   <!-- Google Maps API - loaded dynamically with key from env.js -->
   <script>
