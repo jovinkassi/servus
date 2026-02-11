@@ -601,12 +601,12 @@ async def worker_job_action(worker_id: str, action_input: JobActionInput):
 
         elif action == 'complete':
             booking_ref.update({
-                'status': 'completed',
-                'completedAt': firestore.SERVER_TIMESTAMP
+                'status': 'awaiting_confirmation',
+                'workCompletedAt': firestore.SERVER_TIMESTAMP
             })
             # Notify customer
-            notify_customer_job_status(job_id, 'completed', worker_name)
-            return {"success": True, "message": "Job marked as completed"}
+            notify_customer_job_status(job_id, 'awaiting_confirmation', worker_name)
+            return {"success": True, "message": "Job marked as completed, awaiting customer confirmation"}
 
         elif action == 'start':
             booking_ref.update({

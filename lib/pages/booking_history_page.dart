@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/firestore_service.dart';
+import '../services/chat_service.dart';
 import 'profile_page.dart';
+import 'chat_page.dart';
+import 'chat_list_page.dart';
 
 class BookingHistoryPage extends StatefulWidget {
   const BookingHistoryPage({super.key});
@@ -13,8 +16,11 @@ class BookingHistoryPage extends StatefulWidget {
 class _BookingHistoryPageState extends State<BookingHistoryPage>
     with SingleTickerProviderStateMixin {
   final FirestoreService _firestoreService = FirestoreService();
+  final ChatService _chatService = ChatService();
   late TabController _tabController;
   List<Map<String, dynamic>> _allBookings = [];
+  String? _customerId;
+  String? _customerName;
   bool _isLoading = true;
 
   @override
@@ -37,6 +43,8 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
 
     final prefs = await SharedPreferences.getInstance();
     final customerId = prefs.getString('customer_id');
+    _customerId = customerId;
+    _customerName = prefs.getString('customer_name');
 
     final bookings = customerId != null
         ? await _firestoreService.getBookingsByCustomer(customerId)
@@ -54,6 +62,8 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
         return _allBookings
             .where((b) =>
                 b['status'] == 'pending' ||
+                b['status'] == 'accepted' ||
+                b['status'] == 'in_progress' ||
                 b['status'] == 'confirmed' ||
                 b['status'] == 'awaiting_confirmation')
             .toList();
@@ -133,7 +143,14 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                 Navigator.pop(context);
               }),
               _buildNavItem(Icons.calendar_today, 'Bookings', true, () {}),
-              _buildNavItem(Icons.chat_bubble_outline, 'Chat', false, () {}),
+              _buildNavItem(Icons.chat_bubble_outline, 'Messages', false, () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ChatListPage(),
+                  ),
+                );
+              }),
               _buildNavItem(Icons.person_outline, 'Profile', false, () {
                 Navigator.push(
                   context,
@@ -245,6 +262,16 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
     IconData statusIcon;
     String statusText = status;
     switch (status) {
+      case 'accepted':
+        statusColor = const Color(0xFF2196F3);
+        statusIcon = Icons.check_circle_outline;
+        statusText = 'ACCEPTED';
+        break;
+      case 'in_progress':
+        statusColor = const Color(0xFF9C27B0);
+        statusIcon = Icons.autorenew;
+        statusText = 'IN PROGRESS';
+        break;
       case 'confirmed':
         statusColor = Colors.green;
         statusIcon = Icons.check_circle;
@@ -410,42 +437,90 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                   ),
                 ],
 
-                // Action buttons for pending bookings
+                // Message worker button
+                if (status != 'cancelled') ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _openChat(booking),
+                      icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                      label: const Text('Message Worker'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF2196F3),
+                        side: const BorderSide(color: Color(0xFF2196F3)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+
+                // Mark as completed for in_progress bookings
+                if (status == 'in_progress') ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF9C27B0).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF9C27B0).withValues(alpha: 0.3)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Color(0xFF9C27B0), size: 20),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Worker has started this job. Mark as completed when done.',
+                            style: TextStyle(
+                              color: Color(0xFF9C27B0),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _showRatingDialog(booking),
+                      icon: const Icon(Icons.check_circle, size: 20),
+                      label: const Text('Mark as Completed'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4CAF50),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                ],
+
+                // Cancel button for pending bookings
                 if (status == 'pending') ...[
                   const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => _cancelBooking(booking['id']),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red,
-                            side: const BorderSide(color: Colors.red),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: const Text('Cancel'),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () => _cancelBooking(booking['id']),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => _simulateWorkDone(booking['id']),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: const Text('Simulate Done'),
-                        ),
-                      ),
-                    ],
+                      child: const Text('Cancel Booking'),
+                    ),
                   ),
                 ],
 
@@ -564,6 +639,34 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
     );
   }
 
+  Future<void> _openChat(Map<String, dynamic> booking) async {
+    if (_customerId == null) return;
+
+    final workerId = booking['workerId'] ?? '';
+    final workerName = booking['workerName'] ?? 'Worker';
+
+    final chatId = await _chatService.getOrCreateChat(
+      customerId: _customerId!,
+      customerName: _customerName ?? 'Customer',
+      workerId: workerId,
+      workerName: workerName,
+    );
+
+    if (!mounted) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChatPage(
+          chatId: chatId,
+          currentUserId: _customerId!,
+          currentUserType: 'customer',
+          otherUserName: workerName,
+        ),
+      ),
+    );
+  }
+
   String _formatCategory(String category) {
     return category
         .replaceAll('_', ' ')
@@ -620,27 +723,6 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
     }
   }
 
-  // For testing: simulate worker marking work as done
-  Future<void> _simulateWorkDone(String bookingId) async {
-    final success = await _firestoreService.markWorkAsDone(bookingId);
-    if (!mounted) return;
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Simulated: Worker marked job as done'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      _loadBookings();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to update booking'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
 
   Future<void> _showRatingDialog(Map<String, dynamic> booking) async {
     double rating = 5.0;

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/worker_service.dart';
 import '../widgets/notification_overlay.dart';
 import 'worker_jobs.dart';
+import 'worker_chat_list_page.dart';
 
 class WorkerDashboard extends StatefulWidget {
   final String? workerId;
@@ -459,7 +460,14 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                   'Chat with customers',
                   Icons.chat_bubble_outline_rounded,
                   const Color(0xFFFF9800),
-                  () {},
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => WorkerChatListPage(workerId: _workerService.currentWorkerId),
+                      ),
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 12),
@@ -712,6 +720,13 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
               builder: (context) => WorkerJobsScreen(
                 workerId: _workerService.currentWorkerId,
               ),
+            ),
+          );
+        } else if (index == 2) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => WorkerChatListPage(workerId: _workerService.currentWorkerId),
             ),
           );
         }

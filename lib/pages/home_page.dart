@@ -11,6 +11,7 @@ import 'search_results_page.dart';
 import 'booking_history_page.dart';
 import 'profile_page.dart';
 import 'nearby_workers_map_page.dart';
+import 'chat_list_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -730,7 +731,14 @@ class _HomePageState extends State<HomePage> {
                   ),
                 );
               }),
-              _buildNavItem(Icons.chat_bubble_outline, 'Messages', false, null),
+              _buildNavItem(Icons.chat_bubble_outline, 'Messages', false, () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ChatListPage(),
+                  ),
+                );
+              }),
               _buildNavItem(Icons.person_outline, 'Profile', false, () {
                 Navigator.push(
                   context,
