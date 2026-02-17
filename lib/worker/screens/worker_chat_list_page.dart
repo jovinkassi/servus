@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/chat_service.dart';
-import '../../pages/chat_page.dart';
+import '../../pages/chat/chat_page.dart';
 import 'worker_dashboard.dart';
 import 'worker_jobs.dart';
 import 'worker_profile_page.dart';

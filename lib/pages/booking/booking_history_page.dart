@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/firestore_service.dart';
-import '../services/chat_service.dart';
-import 'profile_page.dart';
-import 'chat_page.dart';
-import 'chat_list_page.dart';
+import '../../services/firestore_service.dart';
+import '../../services/chat_service.dart';
+import '../profile/profile_page.dart';
+import '../chat/chat_page.dart';
+import '../chat/chat_list_page.dart';
 
 class BookingHistoryPage extends StatefulWidget {
   const BookingHistoryPage({super.key});
@@ -350,7 +350,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                 ),
                 const Spacer(),
                 Text(
-                  '\$$hourlyRate/hr',
+                  '₹$hourlyRate/hr',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,

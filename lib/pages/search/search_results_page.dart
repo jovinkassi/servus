@@ -1,7 +1,7 @@
 // pages/search_results_page.dart
 import 'package:flutter/material.dart';
-import 'booking_page.dart';
-import 'profile_page.dart';
+import '../booking/booking_page.dart';
+import '../profile/profile_page.dart';
 import 'nearby_workers_map_page.dart';
 
 class SearchResultsPage extends StatefulWidget {
@@ -340,7 +340,7 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                   ),
                 ),
                 Text(
-                  '\$$hourlyRate/hr',
+                  '₹$hourlyRate/hr',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

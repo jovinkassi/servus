@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/chat_service.dart';
+import '../../services/chat_service.dart';
 import 'chat_page.dart';
-import 'home_page.dart';
-import 'booking_history_page.dart';
-import 'profile_page.dart';
+import '../home_page.dart';
+import '../booking/booking_history_page.dart';
+import '../profile/profile_page.dart';
 
 class ChatListPage extends StatefulWidget {
   const ChatListPage({super.key});

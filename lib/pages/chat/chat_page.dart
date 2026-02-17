@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../services/chat_service.dart';
+import '../../services/chat_service.dart';
 
 class ChatPage extends StatefulWidget {
   final String chatId;

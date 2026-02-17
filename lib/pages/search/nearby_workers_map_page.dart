@@ -4,8 +4,8 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../services/location_service.dart';
-import 'booking_page.dart';
+import '../../services/location_service.dart';
+import '../booking/booking_page.dart';
 
 class NearbyWorkersMapPage extends StatefulWidget {
   final List<dynamic>? workers;
@@ -510,7 +510,7 @@ class _NearbyWorkersMapPageState extends State<NearbyWorkersMapPage> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '\$$hourlyRate',
+                    '₹$hourlyRate',
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -728,7 +728,7 @@ class _NearbyWorkersMapPageState extends State<NearbyWorkersMapPage> {
               ],
             ),
             Text(
-              '\$$hourlyRate/hr',
+              '₹$hourlyRate/hr',
               style: TextStyle(
                 fontSize: 11,
                 color: Colors.grey[600],

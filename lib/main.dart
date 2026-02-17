@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'pages/customer_login.dart';
+import 'pages/auth/customer_login.dart';
 import 'worker/screens/worker_login.dart';
 import 'services/notification_service.dart';
 

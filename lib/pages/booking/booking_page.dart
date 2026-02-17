@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/firestore_service.dart';
+import '../../services/firestore_service.dart';
 
 class BookingPage extends StatefulWidget {
   final Map<String, dynamic> worker;
@@ -380,7 +380,7 @@ class _BookingPageState extends State<BookingPage> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        '\$$hourlyRate/hr',
+                        '₹$hourlyRate/hr',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -681,9 +681,9 @@ class _BookingPageState extends State<BookingPage> {
           const SizedBox(height: 8),
           _buildSummaryRow('Duration Estimate', '~1 Hour'),
           const SizedBox(height: 8),
-          _buildSummaryRow('Hourly Rate', '\$${hourlyRate.toStringAsFixed(2)}'),
+          _buildSummaryRow('Hourly Rate', '₹${hourlyRate.toStringAsFixed(2)}'),
           const SizedBox(height: 8),
-          _buildSummaryRow('Booking Fee', '\$${bookingFee.toStringAsFixed(2)}'),
+          _buildSummaryRow('Booking Fee', '₹${bookingFee.toStringAsFixed(2)}'),
 
           const SizedBox(height: 12),
           Container(
@@ -707,7 +707,7 @@ class _BookingPageState extends State<BookingPage> {
                 ),
               ),
               Text(
-                '\$${totalEstimate.toStringAsFixed(2)}',
+                '₹${totalEstimate.toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -832,7 +832,7 @@ class _BookingPageState extends State<BookingPage> {
                     ),
                   ),
                   Text(
-                    '\$${totalEstimate.toStringAsFixed(2)} / visit',
+                    '₹${totalEstimate.toStringAsFixed(2)} / visit',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,

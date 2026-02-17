@@ -7,12 +7,13 @@ import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/service_category.dart';
+import '../services/firestore_service.dart';
 import '../worker/widgets/notification_overlay.dart';
-import 'search_results_page.dart';
-import 'booking_history_page.dart';
-import 'profile_page.dart';
-import 'nearby_workers_map_page.dart';
-import 'chat_list_page.dart';
+import 'search/search_results_page.dart';
+import 'booking/booking_history_page.dart';
+import 'profile/profile_page.dart';
+import 'search/nearby_workers_map_page.dart';
+import 'chat/chat_list_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -82,6 +83,63 @@ class _HomePageState extends State<HomePage> {
     ServiceCategory('Water', Icons.water_drop, const Color(0xFF42A5F5)),
     ServiceCategory('More', Icons.more_horiz, const Color(0xFF78909C)),
   ];
+
+  // Map UI category names to Firestore category values
+  static const Map<String, List<String>> _categoryMapping = {
+    'Plumber': ['plumber'],
+    'Electric': ['electrician'],
+    'Wood': ['carpenter'],
+    'Clean': ['cleaning'],
+    'HVAC': ['ac_technician'],
+    'Paint': ['painter'],
+    'Water': ['plumber'],
+  };
+
+  Future<void> _onCategoryTap(String categoryName) async {
+    if (categoryName == 'More') {
+      // Fetch all workers
+      setState(() => _loading = true);
+      final workers = await FirestoreService().getAllWorkers();
+      setState(() => _loading = false);
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SearchResultsPage(
+            searchQuery: 'All Services',
+            detectedCategory: 'All',
+            quickFix: '',
+            workers: workers,
+          ),
+        ),
+      );
+      return;
+    }
+
+    final firestoreCategories = _categoryMapping[categoryName];
+    if (firestoreCategories == null) return;
+
+    setState(() => _loading = true);
+    List<Map<String, dynamic>> allWorkers = [];
+    for (final cat in firestoreCategories) {
+      final workers = await FirestoreService().getWorkersByCategory(cat);
+      allWorkers.addAll(workers);
+    }
+    setState(() => _loading = false);
+
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SearchResultsPage(
+          searchQuery: categoryName,
+          detectedCategory: categoryName.toLowerCase(),
+          quickFix: '',
+          workers: allWorkers,
+        ),
+      ),
+    );
+  }
 
   // ---------------- BACKEND CALL ----------------
   Future<void> _classifyIssue(String description) async {
@@ -703,7 +761,7 @@ class _HomePageState extends State<HomePage> {
             itemBuilder: (context, index) {
               final category = _categories[index];
               return GestureDetector(
-                onTap: () {},
+                onTap: () => _onCategoryTap(category.name),
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.white,

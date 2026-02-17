@@ -4,10 +4,10 @@ import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
-import 'booking_history_page.dart';
-import 'chat_list_page.dart';
-import 'home_page.dart';
-import '../main.dart';
+import '../booking/booking_history_page.dart';
+import '../chat/chat_list_page.dart';
+import '../home_page.dart';
+import '../../main.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
