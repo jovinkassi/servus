@@ -9,9 +9,12 @@ import pandas as pd
 import torch
 from sentence_transformers import SentenceTransformer, util
 import os
+import hashlib
+from datetime import datetime
 import google.generativeai as genai
 import firebase_admin
 from firebase_admin import credentials, firestore
+from web3 import Web3
 
 
 # -------------------------------
@@ -58,6 +61,62 @@ if not firebase_admin._apps:
 
 db = firestore.client()
 print("✅ Firestore client ready!")
+
+# -------------------------------
+# Blockchain Setup (Polygon Amoy Testnet)
+# -------------------------------
+AMOY_RPC_URL = os.getenv("AMOY_RPC_URL", "https://rpc-amoy.polygon.technology")
+BLOCKCHAIN_PRIVATE_KEY = os.getenv("BLOCKCHAIN_PRIVATE_KEY", "")
+
+w3 = Web3(Web3.HTTPProvider(AMOY_RPC_URL))
+if BLOCKCHAIN_PRIVATE_KEY:
+    blockchain_account = w3.eth.account.from_key(BLOCKCHAIN_PRIVATE_KEY)
+    WALLET_ADDRESS = blockchain_account.address
+    print(f"✅ Blockchain wallet loaded: {WALLET_ADDRESS}")
+else:
+    blockchain_account = None
+    WALLET_ADDRESS = None
+    print("⚠️ No blockchain private key configured - verification will be disabled")
+
+# -------------------------------
+# Verhoeff Checksum Algorithm (Aadhaar validation)
+# -------------------------------
+VERHOEFF_D = [
+    [0,1,2,3,4,5,6,7,8,9],
+    [1,2,3,4,0,6,7,8,9,5],
+    [2,3,4,0,1,7,8,9,5,6],
+    [3,4,0,1,2,8,9,5,6,7],
+    [4,0,1,2,3,9,5,6,7,8],
+    [5,9,8,7,6,0,4,3,2,1],
+    [6,5,9,8,7,1,0,4,3,2],
+    [7,6,5,9,8,2,1,0,4,3],
+    [8,7,6,5,9,3,2,1,0,4],
+    [9,8,7,6,5,4,3,2,1,0],
+]
+
+VERHOEFF_P = [
+    [0,1,2,3,4,5,6,7,8,9],
+    [1,5,7,6,2,8,3,0,9,4],
+    [5,8,0,3,7,9,6,1,4,2],
+    [8,9,1,6,0,4,3,5,2,7],
+    [9,4,5,3,1,2,6,8,7,0],
+    [4,2,8,6,5,7,3,9,0,1],
+    [2,7,9,3,8,0,6,4,1,5],
+    [7,0,4,6,9,1,3,2,5,8],
+]
+
+VERHOEFF_INV = [0,4,3,2,1,5,6,7,8,9]
+
+def verhoeff_validate(number: str) -> bool:
+    """Validate a number using Verhoeff checksum (used for Aadhaar)"""
+    try:
+        c = 0
+        digits = [int(d) for d in reversed(number)]
+        for i, digit in enumerate(digits):
+            c = VERHOEFF_D[c][VERHOEFF_P[i % 8][digit]]
+        return c == 0
+    except (ValueError, IndexError):
+        return False
 
 # -------------------------------
 # FastAPI app
@@ -319,6 +378,9 @@ class JobActionInput(BaseModel):
     job_id: str
     action: str  # 'accept' or 'reject'
     reason: str = ""
+
+class AadhaarVerificationInput(BaseModel):
+    aadhaar_number: str
 
 
 # -------------------------------
@@ -742,6 +804,89 @@ async def get_nearby_workers(lat: float = None, lng: float = None, radius: float
     except Exception as e:
         print(f"❌ Error fetching nearby workers: {e}")
         return {"success": False, "error": str(e), "workers": []}
+
+
+# -------------------------------
+# Aadhaar Blockchain Verification Endpoint
+# -------------------------------
+@app.post("/worker/{worker_id}/verify-aadhaar")
+async def verify_aadhaar(worker_id: str, input: AadhaarVerificationInput):
+    """Verify worker's Aadhaar number and record hash on Polygon Amoy blockchain"""
+    try:
+        aadhaar = input.aadhaar_number.strip().replace(" ", "")
+
+        # Validate format: must be exactly 12 digits
+        if not aadhaar.isdigit() or len(aadhaar) != 12:
+            return {"success": False, "error": "Aadhaar number must be exactly 12 digits"}
+
+        # Verhoeff checksum validation
+        if not verhoeff_validate(aadhaar):
+            return {"success": False, "error": "Invalid Aadhaar number (checksum failed)"}
+
+        # Check worker exists
+        worker_doc = db.collection('workers').document(worker_id).get()
+        if not worker_doc.exists:
+            return {"success": False, "error": "Worker not found"}
+
+        worker_data = worker_doc.to_dict()
+        if worker_data.get('verified') == True:
+            return {"success": False, "error": "Worker is already verified"}
+
+        # Check blockchain wallet is configured
+        if not blockchain_account or not WALLET_ADDRESS:
+            return {"success": False, "error": "Blockchain verification is not configured on server"}
+
+        # Create verification hash: SHA-256(workerId:aadhaar:timestamp)
+        timestamp = datetime.utcnow().isoformat()
+        raw_string = f"{worker_id}:{aadhaar}:{timestamp}"
+        verification_hash = hashlib.sha256(raw_string.encode()).hexdigest()
+
+        # Send 0-value self-transaction on Polygon Amoy with hash in data field
+        try:
+            nonce = w3.eth.get_transaction_count(WALLET_ADDRESS)
+            tx = {
+                'nonce': nonce,
+                'to': WALLET_ADDRESS,  # self-transaction
+                'value': 0,
+                'gas': 25000,
+                'gasPrice': w3.to_wei('30', 'gwei'),
+                'chainId': 80002,  # Polygon Amoy
+                'data': w3.to_bytes(text=verification_hash),
+            }
+
+            signed_tx = w3.eth.account.sign_transaction(tx, BLOCKCHAIN_PRIVATE_KEY)
+            tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+            tx_hash_hex = tx_hash.hex()
+
+            print(f"✅ Blockchain tx sent: {tx_hash_hex}")
+
+        except Exception as e:
+            print(f"❌ Blockchain transaction failed: {e}")
+            return {"success": False, "error": f"Blockchain transaction failed: {str(e)}"}
+
+        # Update worker document in Firestore
+        db.collection('workers').document(worker_id).update({
+            'verified': True,
+            'blockchainTxHash': tx_hash_hex,
+            'blockchainNetwork': 'Polygon Amoy Testnet',
+            'verificationHash': verification_hash,
+            'verifiedAt': timestamp,
+        })
+
+        print(f"✅ Worker {worker_id} verified on blockchain: {tx_hash_hex}")
+
+        return {
+            "success": True,
+            "message": "Aadhaar verified and recorded on blockchain",
+            "tx_hash": tx_hash_hex,
+            "verification_hash": verification_hash,
+            "network": "Polygon Amoy Testnet",
+            "explorer_url": f"https://amoy.polygonscan.com/tx/0x{tx_hash_hex}",
+        }
+
+    except Exception as e:
+        print(f"❌ Verification error: {e}")
+        return {"success": False, "error": str(e)}
 
 
 # -------------------------------
