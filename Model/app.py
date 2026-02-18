@@ -9,6 +9,7 @@ import pandas as pd
 import torch
 from sentence_transformers import SentenceTransformer, util
 import os
+import json
 import hashlib
 from datetime import datetime
 import google.generativeai as genai
@@ -16,73 +17,83 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 from web3 import Web3
 
-
 # -------------------------------
-# Load dataset
+# Global state (loaded at startup)
 # -------------------------------
-data = pd.read_csv("service_intents.csv")
-data['text'] = data['text'].str.lower()  # lowercase preprocessing
+data = None
+model = None
+gemini_model = None
+db = None
+w3 = None
+blockchain_account = None
+WALLET_ADDRESS = None
 
-# -------------------------------
-# Load Sentence Transformer
-# -------------------------------
-model_name = "all-mpnet-base-v2"  # more accurate than MiniLM
-model = SentenceTransformer(model_name)
+def _init_all():
+    """Initialize all heavy services - called after server binds port."""
+    global data, model, gemini_model, db, w3, blockchain_account, WALLET_ADDRESS
 
-# Compute embeddings for all dataset texts
-print("⚡ Generating embeddings for dataset...")
-data['embeddings'] = list(model.encode(data['text'], convert_to_tensor=True))
-print("✅ Embeddings ready!")
+    # Load dataset
+    data = pd.read_csv("service_intents.csv")
+    data['text'] = data['text'].str.lower()
 
+    # Load Sentence Transformer
+    print("⚡ Loading ML model...")
+    model_name = "all-mpnet-base-v2"
+    model = SentenceTransformer(model_name)
 
+    print("⚡ Generating embeddings for dataset...")
+    data['embeddings'] = list(model.encode(data['text'], convert_to_tensor=True))
+    print("✅ Embeddings ready!")
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-gemini_model = genai.GenerativeModel("models/gemini-2.5-flash")
+    # Gemini
+    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+    gemini_model = genai.GenerativeModel("models/gemini-2.5-flash")
 
-models = genai.list_models()
-for m in models:
-    print(m)
+    # Firebase
+    if not firebase_admin._apps:
+        service_account_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+        service_account_path = os.getenv("FIREBASE_SERVICE_ACCOUNT", "serviceAccountKey.json")
 
-# -------------------------------
-# Initialize Firebase Admin SDK
-# -------------------------------
-# Check if Firebase is already initialized
-if not firebase_admin._apps:
-    # Try loading service account from env var (JSON string) for cloud deployment
-    service_account_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
-    service_account_path = os.getenv("FIREBASE_SERVICE_ACCOUNT", "serviceAccountKey.json")
+        if service_account_json:
+            cred = credentials.Certificate(json.loads(service_account_json))
+            firebase_admin.initialize_app(cred)
+            print("✅ Firebase initialized with service account from env var")
+        elif os.path.exists(service_account_path):
+            cred = credentials.Certificate(service_account_path)
+            firebase_admin.initialize_app(cred)
+            print("✅ Firebase initialized with service account file")
+        else:
+            firebase_admin.initialize_app()
+            print("⚠️ Firebase initialized without service account")
 
-    if service_account_json:
-        import json
-        cred = credentials.Certificate(json.loads(service_account_json))
-        firebase_admin.initialize_app(cred)
-        print("✅ Firebase initialized with service account from env var")
-    elif os.path.exists(service_account_path):
-        cred = credentials.Certificate(service_account_path)
-        firebase_admin.initialize_app(cred)
-        print("✅ Firebase initialized with service account file")
+    db = firestore.client()
+    print("✅ Firestore client ready!")
+
+    # Blockchain
+    AMOY_RPC_URL = os.getenv("AMOY_RPC_URL", "https://rpc-amoy.polygon.technology")
+    BLOCKCHAIN_PRIVATE_KEY = os.getenv("BLOCKCHAIN_PRIVATE_KEY", "")
+
+    w3 = Web3(Web3.HTTPProvider(AMOY_RPC_URL))
+    if BLOCKCHAIN_PRIVATE_KEY:
+        blockchain_account = w3.eth.account.from_key(BLOCKCHAIN_PRIVATE_KEY)
+        WALLET_ADDRESS = blockchain_account.address
+        print(f"✅ Blockchain wallet loaded: {WALLET_ADDRESS}")
     else:
-        firebase_admin.initialize_app()
-        print("⚠️ Firebase initialized without service account - Firestore may not work")
+        blockchain_account = None
+        WALLET_ADDRESS = None
+        print("⚠️ No blockchain private key configured")
 
-db = firestore.client()
-print("✅ Firestore client ready!")
+_ready = False
 
-# -------------------------------
-# Blockchain Setup (Polygon Amoy Testnet)
-# -------------------------------
-AMOY_RPC_URL = os.getenv("AMOY_RPC_URL", "https://rpc-amoy.polygon.technology")
-BLOCKCHAIN_PRIVATE_KEY = os.getenv("BLOCKCHAIN_PRIVATE_KEY", "")
+def _init_in_background():
+    """Run heavy init in a background thread so the port binds immediately."""
+    global _ready
+    _init_all()
+    _ready = True
+    print("✅ All services ready!")
 
-w3 = Web3(Web3.HTTPProvider(AMOY_RPC_URL))
-if BLOCKCHAIN_PRIVATE_KEY:
-    blockchain_account = w3.eth.account.from_key(BLOCKCHAIN_PRIVATE_KEY)
-    WALLET_ADDRESS = blockchain_account.address
-    print(f"✅ Blockchain wallet loaded: {WALLET_ADDRESS}")
-else:
-    blockchain_account = None
-    WALLET_ADDRESS = None
-    print("⚠️ No blockchain private key configured - verification will be disabled")
+import threading
+threading.Thread(target=_init_in_background, daemon=True).start()
 
 # -------------------------------
 # Verhoeff Checksum Algorithm (Aadhaar validation)
@@ -136,6 +147,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "ready": _ready}
 
 # Input model
 class ProblemInput(BaseModel):
