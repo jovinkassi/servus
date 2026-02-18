@@ -1,27 +1,28 @@
 
+import os
+import json
+import hashlib
+import threading
+from datetime import datetime
+
 from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import pandas as pd
-import torch
-from sentence_transformers import SentenceTransformer, util
-import os
-import json
-import hashlib
-from datetime import datetime
-import google.generativeai as genai
-import firebase_admin
-from firebase_admin import credentials, firestore
-from web3 import Web3
+
+# NOTE: Heavy imports (torch, sentence_transformers, pandas, firebase, web3, genai)
+# are deferred to _init_all() so uvicorn can bind the port immediately.
 
 # -------------------------------
-# Global state (loaded at startup)
+# Global state (loaded in background)
 # -------------------------------
 data = None
 model = None
+torch = None
+util = None  # sentence_transformers.util
+firestore = None
 gemini_model = None
 db = None
 w3 = None
@@ -29,8 +30,24 @@ blockchain_account = None
 WALLET_ADDRESS = None
 
 def _init_all():
-    """Initialize all heavy services - called after server binds port."""
-    global data, model, gemini_model, db, w3, blockchain_account, WALLET_ADDRESS
+    """Initialize all heavy services in background thread."""
+    global data, model, torch, util, firestore, gemini_model, db, w3, blockchain_account, WALLET_ADDRESS
+
+    import pandas as pd
+    import torch as torch_mod
+    from sentence_transformers import SentenceTransformer
+    from sentence_transformers import util as st_util
+
+    torch = torch_mod
+    util = st_util
+
+    import google.generativeai as genai
+    import firebase_admin
+    from firebase_admin import credentials
+    from firebase_admin import firestore as _firestore
+    from web3 import Web3
+
+    firestore = _firestore
 
     # Load dataset
     data = pd.read_csv("service_intents.csv")
@@ -38,8 +55,7 @@ def _init_all():
 
     # Load Sentence Transformer
     print("⚡ Loading ML model...")
-    model_name = "all-mpnet-base-v2"
-    model = SentenceTransformer(model_name)
+    model = SentenceTransformer("all-mpnet-base-v2")
 
     print("⚡ Generating embeddings for dataset...")
     data['embeddings'] = list(model.encode(data['text'], convert_to_tensor=True))
@@ -86,13 +102,14 @@ def _init_all():
 _ready = False
 
 def _init_in_background():
-    """Run heavy init in a background thread so the port binds immediately."""
     global _ready
-    _init_all()
-    _ready = True
-    print("✅ All services ready!")
+    try:
+        _init_all()
+        _ready = True
+        print("✅ All services ready!")
+    except Exception as e:
+        print(f"❌ Init failed: {e}")
 
-import threading
 threading.Thread(target=_init_in_background, daemon=True).start()
 
 # -------------------------------
