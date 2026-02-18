@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../booking/booking_page.dart';
 import '../profile/profile_page.dart';
 import 'nearby_workers_map_page.dart';
+import '../../services/location_service.dart';
 
 class SearchResultsPage extends StatefulWidget {
   final String searchQuery;
@@ -23,13 +24,396 @@ class SearchResultsPage extends StatefulWidget {
 }
 
 class _SearchResultsPageState extends State<SearchResultsPage> {
-  String _selectedFilter = 'Recommended';
-  final List<String> _filters = [
+  String _selectedSort = 'Recommended';
+  final List<String> _sortOptions = [
     'Recommended',
     'Top Rated',
     'Nearest',
-    'Available'
+    'Price: Low',
+    'Price: High',
   ];
+
+  // Filter state
+  RangeValues _priceRange = const RangeValues(0, 5000);
+  double _minRating = 0;
+  bool _verifiedOnly = false;
+  bool _availableOnly = false;
+
+  // Location for distance calc
+  final LocationService _locationService = LocationService();
+  double? _userLat;
+  double? _userLng;
+
+  // Processed workers list
+  List<Map<String, dynamic>> _processedWorkers = [];
+  int _activeFilterCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocationAndProcess();
+  }
+
+  Future<void> _loadLocationAndProcess() async {
+    final pos = await _locationService.getCurrentPosition();
+    if (pos != null) {
+      _userLat = pos.latitude;
+      _userLng = pos.longitude;
+    }
+    _applyFiltersAndSort();
+  }
+
+  void _applyFiltersAndSort() {
+    List<Map<String, dynamic>> workers = widget.workers.map((w) {
+      final map = Map<String, dynamic>.from(w as Map);
+
+      // Calculate distance if we have user location and worker has coords
+      if (_userLat != null && _userLng != null) {
+        final wLat = map['latitude'];
+        final wLng = map['longitude'];
+        if (wLat != null && wLng != null) {
+          final km = _locationService.calculateDistance(
+            _userLat!,
+            _userLng!,
+            wLat.toDouble(),
+            wLng.toDouble(),
+          );
+          map['_distance_km'] = km;
+          map['distance'] = km < 1
+              ? '${(km * 1000).round()} m'
+              : '${km.toStringAsFixed(1)} km';
+        }
+      }
+
+      return map;
+    }).toList();
+
+    // Count active filters
+    int filterCount = 0;
+
+    // Apply price filter
+    if (_priceRange.start > 0 || _priceRange.end < 5000) {
+      filterCount++;
+      workers = workers.where((w) {
+        final rate = _getRate(w);
+        return rate >= _priceRange.start && rate <= _priceRange.end;
+      }).toList();
+    }
+
+    // Apply rating filter
+    if (_minRating > 0) {
+      filterCount++;
+      workers = workers.where((w) {
+        return _getRating(w) >= _minRating;
+      }).toList();
+    }
+
+    // Apply verified filter
+    if (_verifiedOnly) {
+      filterCount++;
+      workers = workers.where((w) => w['verified'] == true).toList();
+    }
+
+    // Apply available filter
+    if (_availableOnly) {
+      filterCount++;
+      workers = workers.where((w) {
+        final avail = w['availability'];
+        return avail != null && avail is Map && avail.isNotEmpty;
+      }).toList();
+    }
+
+    // Sort
+    switch (_selectedSort) {
+      case 'Top Rated':
+        workers.sort((a, b) => _getRating(b).compareTo(_getRating(a)));
+        break;
+      case 'Nearest':
+        workers.sort((a, b) {
+          final aDist = a['_distance_km'] as double? ?? 99999;
+          final bDist = b['_distance_km'] as double? ?? 99999;
+          return aDist.compareTo(bDist);
+        });
+        break;
+      case 'Price: Low':
+        workers.sort((a, b) => _getRate(a).compareTo(_getRate(b)));
+        break;
+      case 'Price: High':
+        workers.sort((a, b) => _getRate(b).compareTo(_getRate(a)));
+        break;
+      default:
+        break;
+    }
+
+    setState(() {
+      _processedWorkers = workers;
+      _activeFilterCount = filterCount;
+    });
+  }
+
+  double _getRating(Map<String, dynamic> w) {
+    final r = w['rating'];
+    if (r is num) return r.toDouble();
+    if (r is String) return double.tryParse(r) ?? 0;
+    return 0;
+  }
+
+  double _getRate(Map<String, dynamic> w) {
+    final r = w['hourly_rate'] ?? w['rate'];
+    if (r is num) return r.toDouble();
+    if (r is String) {
+      return double.tryParse(r.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0;
+    }
+    return 0;
+  }
+
+  void _showFilterSheet() {
+    RangeValues tempPrice = _priceRange;
+    double tempRating = _minRating;
+    bool tempVerified = _verifiedOnly;
+    bool tempAvailable = _availableOnly;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Handle bar
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Title row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Filters',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E3A5F),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          setSheetState(() {
+                            tempPrice = const RangeValues(0, 5000);
+                            tempRating = 0;
+                            tempVerified = false;
+                            tempAvailable = false;
+                          });
+                        },
+                        child: const Text('Reset',
+                            style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Price range
+                  Text(
+                    'Hourly Rate',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('₹${tempPrice.start.round()}',
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 13)),
+                      Text('₹${tempPrice.end.round()}',
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 13)),
+                    ],
+                  ),
+                  RangeSlider(
+                    values: tempPrice,
+                    min: 0,
+                    max: 5000,
+                    divisions: 50,
+                    activeColor: const Color(0xFF2196F3),
+                    labels: RangeLabels(
+                      '₹${tempPrice.start.round()}',
+                      '₹${tempPrice.end.round()}',
+                    ),
+                    onChanged: (values) {
+                      setSheetState(() => tempPrice = values);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Minimum rating
+                  Text(
+                    'Minimum Rating',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: List.generate(5, (i) {
+                      final starValue = (i + 1).toDouble();
+                      final isActive = starValue <= tempRating;
+                      return GestureDetector(
+                        onTap: () {
+                          setSheetState(() {
+                            tempRating =
+                                tempRating == starValue ? 0 : starValue;
+                          });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Icon(
+                            isActive ? Icons.star : Icons.star_border,
+                            color:
+                                isActive ? Colors.orange : Colors.grey[400],
+                            size: 32,
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                  if (tempRating > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        '${tempRating.toInt()}+ stars',
+                        style:
+                            TextStyle(color: Colors.grey[600], fontSize: 13),
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+
+                  // Toggle filters
+                  _buildFilterToggle(
+                    'Verified Only',
+                    'Show only verified workers',
+                    Icons.verified,
+                    Colors.green,
+                    tempVerified,
+                    (val) => setSheetState(() => tempVerified = val),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildFilterToggle(
+                    'Available Now',
+                    'Workers with set availability',
+                    Icons.event_available,
+                    const Color(0xFF2196F3),
+                    tempAvailable,
+                    (val) => setSheetState(() => tempAvailable = val),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Apply button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        _priceRange = tempPrice;
+                        _minRating = tempRating;
+                        _verifiedOnly = tempVerified;
+                        _availableOnly = tempAvailable;
+                        Navigator.pop(context);
+                        _applyFiltersAndSort();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1E3A5F),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Apply Filters',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: MediaQuery.of(context).padding.bottom),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildFilterToggle(
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+    bool value,
+    ValueChanged<bool> onChanged,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: value ? color.withAlpha(15) : Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: value ? color.withAlpha(80) : Colors.grey[200]!,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[800])),
+                Text(subtitle,
+                    style:
+                        TextStyle(fontSize: 12, color: Colors.grey[500])),
+              ],
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: color,
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,41 +444,67 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.tune, color: Colors.black),
-            onPressed: () {
-              // Show filter options
-            },
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.tune, color: Colors.black),
+                onPressed: _showFilterSheet,
+              ),
+              if (_activeFilterCount > 0)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    width: 18,
+                    height: 18,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF2196F3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '$_activeFilterCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
       ),
       body: Column(
         children: [
-          // Filter chips
+          // Sort chips
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: _filters.map((filter) {
-                  final isSelected = filter == _selectedFilter;
+                children: _sortOptions.map((option) {
+                  final isSelected = option == _selectedSort;
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ChoiceChip(
-                      label: Text(filter),
+                      label: Text(option),
                       selected: isSelected,
                       onSelected: (selected) {
-                        setState(() {
-                          _selectedFilter = filter;
-                        });
+                        setState(() => _selectedSort = option);
+                        _applyFiltersAndSort();
                       },
                       backgroundColor: Colors.white,
                       selectedColor: const Color(0xFF2196F3),
                       labelStyle: TextStyle(
                         color: isSelected ? Colors.white : Colors.black87,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 8),
@@ -116,12 +526,13 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
           // Results count and map view
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${widget.workers.length} pros found nearby',
+                  '${_processedWorkers.length} pros found${_activeFilterCount > 0 ? ' (filtered)' : ''}',
                   style: const TextStyle(
                     fontSize: 14,
                     color: Colors.grey,
@@ -133,7 +544,7 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => NearbyWorkersMapPage(
-                          workers: widget.workers,
+                          workers: _processedWorkers,
                           searchQuery: widget.searchQuery,
                           detectedCategory: widget.detectedCategory,
                         ),
@@ -152,25 +563,47 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
 
           // Workers list
           Expanded(
-            child: widget.workers.isEmpty
+            child: _processedWorkers.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.search_off, size: 64, color: Colors.grey),
-                        SizedBox(height: 16),
-                        Text(
-                          'No workers found',
-                          style: TextStyle(fontSize: 18, color: Colors.grey),
+                      children: [
+                        Icon(
+                          _activeFilterCount > 0
+                              ? Icons.filter_alt_off
+                              : Icons.search_off,
+                          size: 64,
+                          color: Colors.grey[300],
                         ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _activeFilterCount > 0
+                              ? 'No workers match your filters'
+                              : 'No workers found',
+                          style: TextStyle(
+                              fontSize: 18, color: Colors.grey[400]),
+                        ),
+                        if (_activeFilterCount > 0) ...[
+                          const SizedBox(height: 12),
+                          TextButton(
+                            onPressed: () {
+                              _priceRange = const RangeValues(0, 5000);
+                              _minRating = 0;
+                              _verifiedOnly = false;
+                              _availableOnly = false;
+                              _applyFiltersAndSort();
+                            },
+                            child: const Text('Clear Filters'),
+                          ),
+                        ],
                       ],
                     ),
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.all(16),
-                    itemCount: widget.workers.length,
+                    itemCount: _processedWorkers.length,
                     itemBuilder: (context, index) {
-                      final worker = widget.workers[index];
+                      final worker = _processedWorkers[index];
                       return _buildWorkerCard(worker);
                     },
                   ),
@@ -182,22 +615,20 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
   }
 
   Widget _buildWorkerCard(dynamic worker) {
-    // Extract worker data - adjust based on your backend structure
     final name = worker['name'] ?? worker.toString();
-    final title = worker['title'] ?? '${widget.detectedCategory} Professional';
+    final title =
+        worker['title'] ?? '${widget.detectedCategory} Professional';
     final experience = worker['experience'] ?? '';
 
-    // Handle rating - can be int, double, or string
-    double rating = 4.5;
+    double rating = 0;
     if (worker['rating'] != null) {
       if (worker['rating'] is num) {
         rating = worker['rating'].toDouble();
       } else if (worker['rating'] is String) {
-        rating = double.tryParse(worker['rating']) ?? 4.5;
+        rating = double.tryParse(worker['rating']) ?? 0;
       }
     }
 
-    // Handle review count
     int reviewCount = 0;
     if (worker['reviews'] != null) {
       if (worker['reviews'] is int) {
@@ -207,17 +638,15 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
       }
     }
 
-    // Handle distance - can be "2 km" or a number
-    String distanceStr = '0.0 mi';
+    String distanceStr = '';
     if (worker['distance'] != null) {
       if (worker['distance'] is num) {
-        distanceStr = '${worker['distance'].toStringAsFixed(1)} mi';
+        distanceStr = '${worker['distance'].toStringAsFixed(1)} km';
       } else if (worker['distance'] is String) {
-        distanceStr = worker['distance']; // Already formatted like "2 km"
+        distanceStr = worker['distance'];
       }
     }
 
-    // Handle hourly rate
     int hourlyRate = 0;
     final rateValue = worker['hourly_rate'] ?? worker['rate'];
     if (rateValue != null) {
@@ -229,7 +658,7 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
       }
     }
 
-    final isVerified = worker['verified'] ?? true;
+    final isVerified = worker['verified'] ?? false;
     final avatar = worker['avatar'] ?? '';
 
     return Container(
@@ -239,7 +668,7 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withAlpha(13),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -269,7 +698,8 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                               child: Image.network(
                                 avatar,
                                 fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
+                                errorBuilder:
+                                    (context, error, stackTrace) {
                                   return Center(
                                     child: Text(
                                       name.isNotEmpty
@@ -287,7 +717,9 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                             )
                           : Center(
                               child: Text(
-                                name.isNotEmpty ? name[0].toUpperCase() : 'P',
+                                name.isNotEmpty
+                                    ? name[0].toUpperCase()
+                                    : 'P',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 24,
@@ -306,7 +738,8 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                           decoration: BoxDecoration(
                             color: Colors.green,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.white, width: 2),
+                            border:
+                                Border.all(color: Colors.white, width: 2),
                           ),
                           child: const Icon(
                             Icons.check,
@@ -330,7 +763,9 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                         ),
                       ),
                       Text(
-                        experience.isNotEmpty ? '$title • $experience' : title,
+                        experience.isNotEmpty
+                            ? '$title • $experience'
+                            : title,
                         style: const TextStyle(
                           fontSize: 14,
                           color: Colors.grey,
@@ -370,16 +805,19 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                       fontSize: 14,
                     ),
                   ),
-                const SizedBox(width: 16),
-                const Icon(Icons.location_on, color: Colors.grey, size: 18),
-                const SizedBox(width: 4),
-                Text(
-                  distanceStr,
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14,
+                if (distanceStr.isNotEmpty) ...[
+                  const SizedBox(width: 16),
+                  const Icon(Icons.location_on,
+                      color: Colors.grey, size: 18),
+                  const SizedBox(width: 4),
+                  Text(
+                    distanceStr,
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 14,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
             const SizedBox(height: 12),
@@ -460,7 +898,8 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF57C00).withAlpha(25),
+                              color:
+                                  const Color(0xFFF57C00).withAlpha(25),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
@@ -495,13 +934,13 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () {
-                      // View profile
                       _showWorkerProfile(worker);
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.black87,
                       side: BorderSide(color: Colors.grey[300]!),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -516,13 +955,13 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
-                      // Book now
                       _bookWorker(worker);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF2196F3),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -543,7 +982,6 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
   }
 
   void _showWorkerProfile(dynamic worker) {
-    // TODO: Navigate to worker profile page
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -588,7 +1026,8 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                 Navigator.pop(context);
               }),
               _buildNavItem(Icons.search, 'Search', true, () {}),
-              _buildNavItem(Icons.chat_bubble_outline, 'Messages', false, () {}),
+              _buildNavItem(
+                  Icons.chat_bubble_outline, 'Messages', false, () {}),
               _buildNavItem(Icons.person_outline, 'Profile', false, () {
                 Navigator.push(
                   context,
@@ -604,7 +1043,8 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
     );
   }
 
-  Widget _buildNavItem(IconData icon, String label, bool isActive, VoidCallback onTap) {
+  Widget _buildNavItem(
+      IconData icon, String label, bool isActive, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -621,7 +1061,8 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
             style: TextStyle(
               fontSize: 12,
               color: isActive ? const Color(0xFF2196F3) : Colors.grey,
-              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+              fontWeight:
+                  isActive ? FontWeight.bold : FontWeight.normal,
             ),
           ),
         ],
