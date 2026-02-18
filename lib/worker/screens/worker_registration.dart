@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'worker_dashboard.dart';
 import '../../services/notification_service.dart';
+import '../../services/api_config.dart';
 import '../../widgets/location_picker.dart';
 
 class WorkerRegistrationScreen extends StatefulWidget {
@@ -85,7 +86,7 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:8000/worker/register'),
+        Uri.parse('${ApiConfig().baseUrl}/worker/register'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'name': _nameController.text.trim(),

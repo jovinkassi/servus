@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:http/http.dart' as http;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../services/location_service.dart';
+import '../../services/api_config.dart';
 import '../booking/booking_page.dart';
 
 class NearbyWorkersMapPage extends StatefulWidget {
@@ -134,7 +135,7 @@ class _NearbyWorkersMapPageState extends State<NearbyWorkersMapPage> {
   Future<void> _fetchNearbyWorkers() async {
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:8000/workers/nearby'),
+        Uri.parse('${ApiConfig().baseUrl}/workers/nearby'),
       );
 
       if (response.statusCode == 200) {

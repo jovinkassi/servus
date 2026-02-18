@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'worker_dashboard.dart';
 import 'worker_registration.dart';
 import '../../services/notification_service.dart';
+import '../../services/api_config.dart';
 
 class WorkerLoginScreen extends StatefulWidget {
   const WorkerLoginScreen({super.key});
@@ -59,7 +60,7 @@ class _WorkerLoginScreenState extends State<WorkerLoginScreen>
 
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:8000/worker/login?phone=$phone'),
+        Uri.parse('${ApiConfig().baseUrl}/worker/login?phone=$phone'),
         headers: {'Content-Type': 'application/json'},
       );
 

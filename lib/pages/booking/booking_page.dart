@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/firestore_service.dart';
+import '../../services/api_config.dart';
 
 class BookingPage extends StatefulWidget {
   final Map<String, dynamic> worker;
@@ -964,7 +965,7 @@ class _BookingPageState extends State<BookingPage> {
   Future<void> _notifyWorker(String bookingId, String workerId) async {
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:8000/notify/new-booking'),
+        Uri.parse('${ApiConfig().baseUrl}/notify/new-booking'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'booking_id': bookingId,

@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: servus-api
+    runtime: python
+    rootDir: Model
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: BLOCKCHAIN_PRIVATE_KEY
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: AMOY_RPC_URL
+        value: https://rpc-amoy.polygon.technology
+      - key: PYTHON_VERSION
+        value: "3.11"

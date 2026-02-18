@@ -1,10 +1,10 @@
 // lib/worker/services/worker_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../services/api_config.dart';
 
 class WorkerService {
-  // Use localhost for Chrome/web, 10.0.2.2 for Android emulator
-  static const String baseUrl = "http://localhost:8000";
+  static String get baseUrl => ApiConfig().baseUrl;
 
   // Current worker ID - in production, this would come from authentication
   String? _currentWorkerId;

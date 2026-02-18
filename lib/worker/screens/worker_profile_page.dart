@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import '../../main.dart';
 import '../../widgets/location_picker.dart';
 import '../services/worker_service.dart';
+import '../../services/api_config.dart';
 import 'worker_dashboard.dart';
 import 'worker_jobs.dart';
 import 'worker_chat_list_page.dart';
@@ -824,7 +825,7 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
   Future<void> _submitVerification(String aadhaar) async {
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:8000/worker/${widget.workerId}/verify-aadhaar'),
+        Uri.parse('${ApiConfig().baseUrl}/worker/${widget.workerId}/verify-aadhaar'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'aadhaar_number': aadhaar}),
       );

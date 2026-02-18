@@ -48,14 +48,20 @@ for m in models:
 # -------------------------------
 # Check if Firebase is already initialized
 if not firebase_admin._apps:
-    # Use service account credentials if available, otherwise use default
+    # Try loading service account from env var (JSON string) for cloud deployment
+    service_account_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
     service_account_path = os.getenv("FIREBASE_SERVICE_ACCOUNT", "serviceAccountKey.json")
-    if os.path.exists(service_account_path):
+
+    if service_account_json:
+        import json
+        cred = credentials.Certificate(json.loads(service_account_json))
+        firebase_admin.initialize_app(cred)
+        print("✅ Firebase initialized with service account from env var")
+    elif os.path.exists(service_account_path):
         cred = credentials.Certificate(service_account_path)
         firebase_admin.initialize_app(cred)
-        print("✅ Firebase initialized with service account")
+        print("✅ Firebase initialized with service account file")
     else:
-        # Initialize without credentials (will use default if available)
         firebase_admin.initialize_app()
         print("⚠️ Firebase initialized without service account - Firestore may not work")
 

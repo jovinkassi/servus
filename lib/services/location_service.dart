@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'api_config.dart';
 
 // Conditional import for web geolocation
 import 'location_service_stub.dart'
@@ -29,7 +30,7 @@ class LocationService {
 
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:8000/config/maps-api-key'),
+        Uri.parse('${ApiConfig().baseUrl}/config/maps-api-key'),
       );
 
       if (response.statusCode == 200) {

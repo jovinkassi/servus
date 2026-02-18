@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/service_category.dart';
 import '../services/firestore_service.dart';
+import '../services/api_config.dart';
 import '../worker/widgets/notification_overlay.dart';
 import 'search/search_results_page.dart';
 import 'booking/booking_history_page.dart';
@@ -149,7 +150,7 @@ class _HomePageState extends State<HomePage> {
     try {
       // Send POST request to FastAPI backend
       final response = await http.post(
-        Uri.parse("http://127.0.0.1:8000/analyze"),
+        Uri.parse("${ApiConfig().baseUrl}/analyze"),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'problem': description}),
       );
