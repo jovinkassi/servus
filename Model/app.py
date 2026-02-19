@@ -264,37 +264,33 @@ def get_workers_from_firestore(category: str) -> list:
 
 def generate_quick_fix(problem: str, category: str) -> str:
     """Generate quick fix suggestions using Gemini"""
-    # Hardcoded quick fix to save API calls
-    return "• Turn off the main supply and keep the area dry until the professional arrives.\n• Check for visible damage and take photos for reference.\n• Keep children and pets away from the affected area."
+    print("🧠 Gemini quick fix called:", problem, category)
 
-    # --- GEMINI API CODE (commented out to save API calls) ---
-    # print("🧠 Gemini quick fix called:", problem, category)
-    #
-    # prompt = f"""
-    # You are a home service expert.
-    #
-    # User problem:
-    # {problem}
-    #
-    # Detected service category:
-    # {category}
-    #
-    # Give 2–3 short, safe, temporary quick-fix suggestions.
-    #
-    # Rules:
-    # - Do NOT suggest professional repairs
-    # - Do NOT mention complex tools
-    # - Keep advice safe and simple
-    # - Use bullet points
-    # - Keep response under 100 words
-    # """
-    #
-    # try:
-    #     response = gemini_model.generate_content(prompt)
-    #     return response.text.strip()
-    # except Exception as e:
-    #     print("❌ Gemini Error:", e)
-    #     return "Turn off the main supply and keep the area dry until the professional arrives."
+    prompt = f"""
+    You are a home service expert.
+
+    User problem:
+    {problem}
+
+    Detected service category:
+    {category}
+
+    Give 2–3 short, safe, temporary quick-fix suggestions.
+
+    Rules:
+    - Do NOT suggest professional repairs
+    - Do NOT mention complex tools
+    - Keep advice safe and simple
+    - Use bullet points
+    - Keep response under 100 words
+    """
+
+    try:
+        response = gemini_model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        print("❌ Gemini Error:", e)
+        return "• Turn off the main supply and keep the area dry until the professional arrives.\n• Check for visible damage and take photos for reference.\n• Keep children and pets away from the affected area."
 
 
 def get_worker_reviews(worker_id: str) -> list:
@@ -324,41 +320,36 @@ def generate_review_summary(worker_name: str, reviews: list) -> str:
     if not reviews:
         return ""
 
-    # Hardcoded review summary to save API calls
-    avg_rating = sum(r.get('rating', 0) for r in reviews) / len(reviews)
-    return f"Customers consistently praise {worker_name} for professional service and quality work. With an average rating of {avg_rating:.1f}/5, clients appreciate the punctuality and attention to detail."
+    # Build review text for Gemini
+    review_texts = []
+    for r in reviews:
+        if r.get('review'):
+            review_texts.append(f"Rating: {r['rating']}/5 - \"{r['review']}\"")
+        else:
+            review_texts.append(f"Rating: {r['rating']}/5")
 
-    # --- GEMINI API CODE (commented out to save API calls) ---
-    # # Build review text for Gemini
-    # review_texts = []
-    # for r in reviews:
-    #     if r.get('review'):
-    #         review_texts.append(f"Rating: {r['rating']}/5 - \"{r['review']}\"")
-    #     else:
-    #         review_texts.append(f"Rating: {r['rating']}/5")
-    #
-    # if not review_texts:
-    #     return ""
-    #
-    # reviews_combined = "\n".join(review_texts[:10])  # Limit to 10 reviews
-    #
-    # prompt = f"""
-    # Summarize these customer reviews for {worker_name} in 1-2 sentences.
-    # Focus on key strengths, work quality, and customer satisfaction.
-    # Be concise and professional. Do not use bullet points.
-    #
-    # Reviews:
-    # {reviews_combined}
-    #
-    # Summary:
-    # """
-    #
-    # try:
-    #     response = gemini_model.generate_content(prompt)
-    #     return response.text.strip()
-    # except Exception as e:
-    #     print(f"❌ Gemini review summary error: {e}")
-    #     return ""
+    if not review_texts:
+        return ""
+
+    reviews_combined = "\n".join(review_texts[:10])  # Limit to 10 reviews
+
+    prompt = f"""
+    Summarize these customer reviews for {worker_name} in 1-2 sentences.
+    Focus on key strengths, work quality, and customer satisfaction.
+    Be concise and professional. Do not use bullet points.
+
+    Reviews:
+    {reviews_combined}
+
+    Summary:
+    """
+
+    try:
+        response = gemini_model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        print(f"❌ Gemini review summary error: {e}")
+        return ""
 
 
 # -------------------------------
