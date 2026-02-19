@@ -191,8 +191,10 @@ class _HomePageState extends State<HomePage> {
         _loading = false;
       });
 
-      // Show error dialog
-      _showErrorDialog('Error: $e');
+      // Show user-friendly error
+      _showErrorDialog(
+        'Could not reach the server. It may be waking up — please try again in a moment.',
+      );
     }
   }
 

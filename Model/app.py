@@ -327,6 +327,9 @@ def generate_review_summary(worker_name: str, reviews: list) -> str:
 # -------------------------------
 @app.post("/analyze")
 async def analyze(problem_input: ProblemInput):
+    if not _ready:
+        return {"detected_category": "general_contractor", "available_workers": [], "quick_fix": "Our AI is still warming up. Please try again in a minute.", "status": "loading"}
+
     query = problem_input.problem.lower().strip()
 
     # Embed query
