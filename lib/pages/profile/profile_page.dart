@@ -9,6 +9,7 @@ import '../booking/booking_history_page.dart';
 import '../chat/chat_list_page.dart';
 import '../home_page.dart';
 import '../../main.dart';
+import 'payment_methods_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -55,7 +56,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
         // Load profile image from Firestore
         final savedImage = _userData['profileImageBase64'];
-        if (savedImage != null && savedImage is String && savedImage.isNotEmpty) {
+        if (savedImage != null &&
+            savedImage is String &&
+            savedImage.isNotEmpty) {
           _profileImageBytes = base64Decode(savedImage);
         }
       } else {
@@ -262,7 +265,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 8),
                 // Location badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white.withAlpha(51),
                     borderRadius: BorderRadius.circular(20),
@@ -419,7 +423,18 @@ class _ProfilePageState extends State<ProfilePage> {
               icon: Icons.payment_outlined,
               title: 'Payment Methods',
               subtitle: 'Manage payment options',
-              onTap: () => _showComingSoon('Payment Methods'),
+              onTap: () {
+                // REPLACE THE EXISTING CODE HERE
+                // Instead of _showComingSoon('Payment Methods'),
+                // Add this navigation code:
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PaymentMethodsPage(),
+                  ),
+                );
+              },
             ),
             _buildDivider(),
             _buildMenuItem(
@@ -572,13 +587,16 @@ class _ProfilePageState extends State<ProfilePage> {
                   MaterialPageRoute(builder: (context) => const HomePage()),
                 );
               }),
-              _buildNavItem(Icons.calendar_today_rounded, 'Bookings', false, () {
+              _buildNavItem(Icons.calendar_today_rounded, 'Bookings', false,
+                  () {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (context) => const BookingHistoryPage()),
+                  MaterialPageRoute(
+                      builder: (context) => const BookingHistoryPage()),
                 );
               }),
-              _buildNavItem(Icons.chat_bubble_outline_rounded, 'Messages', false, () {
+              _buildNavItem(
+                  Icons.chat_bubble_outline_rounded, 'Messages', false, () {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => const ChatListPage()),
@@ -592,7 +610,8 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildNavItem(IconData icon, String label, bool isActive, VoidCallback onTap) {
+  Widget _buildNavItem(
+      IconData icon, String label, bool isActive, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -602,7 +621,9 @@ class _ProfilePageState extends State<ProfilePage> {
           vertical: 8,
         ),
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF2196F3).withAlpha(26) : Colors.transparent,
+          color: isActive
+              ? const Color(0xFF2196F3).withAlpha(26)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -640,9 +661,12 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildEditProfileSheet() {
     final nameController = TextEditingController(text: _userData['name'] ?? '');
-    final phoneController = TextEditingController(text: _userData['phone'] ?? '');
-    final locationController = TextEditingController(text: _userData['location'] ?? '');
-    final emailController = TextEditingController(text: _userData['email'] ?? '');
+    final phoneController =
+        TextEditingController(text: _userData['phone'] ?? '');
+    final locationController =
+        TextEditingController(text: _userData['location'] ?? '');
+    final emailController =
+        TextEditingController(text: _userData['email'] ?? '');
     bool isSaving = false;
 
     return StatefulBuilder(
@@ -730,12 +754,14 @@ class _ProfilePageState extends State<ProfilePage> {
                                   final newName = nameController.text.trim();
                                   final newEmail = emailController.text.trim();
                                   final newPhone = phoneController.text.trim();
-                                  final newLocation = locationController.text.trim();
+                                  final newLocation =
+                                      locationController.text.trim();
 
                                   if (newName.isEmpty || newPhone.isEmpty) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('Name and phone are required'),
+                                        content:
+                                            Text('Name and phone are required'),
                                         backgroundColor: Colors.red,
                                       ),
                                     );
@@ -763,9 +789,12 @@ class _ProfilePageState extends State<ProfilePage> {
                                     }
 
                                     // Update SharedPreferences
-                                    final prefs = await SharedPreferences.getInstance();
-                                    await prefs.setString('customer_name', newName);
-                                    await prefs.setString('customer_phone', newPhone);
+                                    final prefs =
+                                        await SharedPreferences.getInstance();
+                                    await prefs.setString(
+                                        'customer_name', newName);
+                                    await prefs.setString(
+                                        'customer_phone', newPhone);
 
                                     // Update local state
                                     setState(() {
@@ -779,7 +808,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                     Navigator.pop(context);
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('Profile updated successfully'),
+                                        content: Text(
+                                            'Profile updated successfully'),
                                         backgroundColor: Colors.green,
                                       ),
                                     );
@@ -788,7 +818,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                     if (!context.mounted) return;
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: Text('Error updating profile: $e'),
+                                        content:
+                                            Text('Error updating profile: $e'),
                                         backgroundColor: Colors.red,
                                       ),
                                     );
@@ -886,7 +917,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   color: const Color(0xFF2196F3).withAlpha(26),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.photo_library, color: Color(0xFF2196F3)),
+                child:
+                    const Icon(Icons.photo_library, color: Color(0xFF2196F3)),
               ),
               title: const Text('Choose from Gallery'),
               onTap: () {
@@ -904,7 +936,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   child: const Icon(Icons.delete, color: Colors.red),
                 ),
-                title: const Text('Remove Photo', style: TextStyle(color: Colors.red)),
+                title: const Text('Remove Photo',
+                    style: TextStyle(color: Colors.red)),
                 onTap: () async {
                   Navigator.pop(context);
                   final messenger = ScaffoldMessenger.of(context);
@@ -932,7 +965,8 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<Uint8List> _compressImage(Uint8List bytes, int maxSize) async {
-    final codec = await ui.instantiateImageCodec(bytes, targetWidth: maxSize, targetHeight: maxSize);
+    final codec = await ui.instantiateImageCodec(bytes,
+        targetWidth: maxSize, targetHeight: maxSize);
     final frame = await codec.getNextFrame();
     final image = frame.image;
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -957,7 +991,8 @@ class _ProfilePageState extends State<ProfilePage> {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Please select an image file (jpg, png, gif, etc.)'),
+              content:
+                  Text('Please select an image file (jpg, png, gif, etc.)'),
               duration: Duration(seconds: 2),
             ),
           );
@@ -1100,7 +1135,8 @@ class _ProfilePageState extends State<ProfilePage> {
               // Navigate to role selection (clear stack)
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (context) => const RoleSelectionScreen()),
+                MaterialPageRoute(
+                    builder: (context) => const RoleSelectionScreen()),
                 (route) => false,
               );
             },
