@@ -11,6 +11,7 @@ import 'worker_jobs.dart';
 import 'worker_chat_list_page.dart';
 import 'worker_schedule_screen.dart';
 import 'worker_profile_page.dart';
+import 'worker_earnings_page.dart';
 
 class WorkerDashboard extends StatefulWidget {
   final String? workerId;
@@ -625,7 +626,14 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                   'View transactions',
                   Icons.account_balance_wallet_outlined,
                   const Color(0xFF9C27B0),
-                  () {},
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => WorkerEarningsPage(workerId: widget.workerId),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],

@@ -201,17 +201,28 @@ class FirestoreService {
     String bookingId,
     String workerId,
     double rating,
-    String? review,
-  ) async {
+    String? review, {
+    String? paymentId,
+    int? amount,
+  }) async {
     try {
       // Update booking with completion and rating
-      await _db.collection('bookings').doc(bookingId).update({
+      final updateData = {
         'status': 'completed',
         'rating': rating,
         'review': review ?? '',
         'completedAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      };
+
+      if (paymentId != null) {
+        updateData['paymentId'] = paymentId;
+        updateData['paymentStatus'] = 'paid';
+        updateData['paymentCompletedAt'] = FieldValue.serverTimestamp();
+        updateData['totalPrice'] = amount ?? 0;
+      }
+
+      await _db.collection('bookings').doc(bookingId).update(updateData);
 
       // Update worker's aggregate rating
       await _updateWorkerRating(workerId, rating);

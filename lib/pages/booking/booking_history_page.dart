@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/firestore_service.dart';
 import '../../services/chat_service.dart';
+import '../../services/razorpay_stub.dart'
+    if (dart.library.html) '../../services/razorpay_web.dart' as razorpay_web;
 import '../profile/profile_page.dart';
 import '../chat/chat_page.dart';
 import '../chat/chat_list_page.dart';
@@ -553,7 +556,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                         const SizedBox(width: 8),
                         const Expanded(
                           child: Text(
-                            'Worker has marked this job as complete. Please confirm and rate.',
+                            'Worker has marked this job as complete. Please pay, confirm and rate.',
                             style: TextStyle(
                               color: Colors.purple,
                               fontSize: 13,
@@ -568,8 +571,8 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () => _showRatingDialog(booking),
-                      icon: const Icon(Icons.star, size: 20),
-                      label: const Text('Confirm & Rate'),
+                      icon: const Icon(Icons.payment, size: 20),
+                      label: const Text('Pay & Rate'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.purple,
                         foregroundColor: Colors.white,
@@ -579,6 +582,41 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                         ),
                         elevation: 0,
                       ),
+                    ),
+                  ),
+                ],
+
+                // Show payment status for completed bookings
+                if (status == 'completed' && booking['paymentId'] != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Paid',
+                          style: TextStyle(
+                            color: Colors.green,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '₹$hourlyRate',
+                          style: const TextStyle(
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -865,31 +903,111 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
     reviewController.dispose();
 
     if (result != null) {
-      final success = await _firestoreService.confirmCompletionAndRate(
-        booking['id'],
-        booking['workerId'],
-        result['rating'],
-        result['review'],
-      );
+      final hourlyRate = booking['hourlyRate'] ?? 0;
+      final amount = (hourlyRate is int ? hourlyRate : (hourlyRate as num).toInt());
 
-      if (!mounted) return;
-
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Thank you for your rating!'),
-            backgroundColor: Colors.green,
-          ),
+      if (amount > 0 && kIsWeb) {
+        // Web: trigger Razorpay JS SDK payment before completing
+        _processWebPayment(
+          booking: booking,
+          amount: amount,
+          rating: result['rating'],
+          review: result['review'],
         );
-        _loadBookings();
       } else {
+        // Mobile or zero amount: complete directly
+        _completeBooking(
+          booking: booking,
+          rating: result['rating'],
+          review: result['review'],
+        );
+      }
+    }
+  }
+
+  void _processWebPayment({
+    required Map<String, dynamic> booking,
+    required int amount,
+    required double rating,
+    required String review,
+  }) {
+    final razorpayKey = razorpay_web.getRazorpayKey();
+    if (razorpayKey == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Payment key not configured. Please refresh the page.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final workerName = booking['workerName'] ?? 'Worker';
+
+    razorpay_web.openRazorpayWeb(
+      key: razorpayKey,
+      amount: amount * 100, // Razorpay expects paise
+      currency: 'INR',
+      name: 'Servus',
+      description: 'Payment for $workerName',
+      prefillEmail: '',
+      prefillContact: '',
+      onSuccess: (paymentId) {
+        _completeBooking(
+          booking: booking,
+          rating: rating,
+          review: review,
+          paymentId: paymentId,
+          amount: amount,
+        );
+      },
+      onError: (message) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to submit rating'),
+          SnackBar(
+            content: Text('Payment failed: $message'),
             backgroundColor: Colors.red,
           ),
         );
-      }
+      },
+    );
+  }
+
+  Future<void> _completeBooking({
+    required Map<String, dynamic> booking,
+    required double rating,
+    required String review,
+    String? paymentId,
+    int? amount,
+  }) async {
+    final success = await _firestoreService.confirmCompletionAndRate(
+      booking['id'],
+      booking['workerId'],
+      rating,
+      review,
+      paymentId: paymentId,
+      amount: amount,
+    );
+
+    if (!mounted) return;
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(paymentId != null
+              ? 'Payment successful! Thank you for your rating!'
+              : 'Thank you for your rating!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      _loadBookings();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to submit rating'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
