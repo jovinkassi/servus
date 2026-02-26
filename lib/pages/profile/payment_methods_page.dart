@@ -20,11 +20,36 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
 
   // UPI Apps list with actual functionality
   final List<Map<String, dynamic>> _upiApps = [
-    {'name': 'Google Pay', 'package': 'com.google.android.apps.nbu.paisa.user', 'color': Colors.blue, 'icon': Icons.g_mobiledata},
-    {'name': 'PhonePe', 'package': 'com.phonepe.app', 'color': Colors.purple, 'icon': Icons.phone_android},
-    {'name': 'Paytm', 'package': 'net.one97.paytm', 'color': Colors.blue, 'icon': Icons.currency_rupee},
-    {'name': 'BHIM', 'package': 'in.org.npci.upiapp', 'color': Colors.orange, 'icon': Icons.account_balance},
-    {'name': 'Amazon Pay', 'package': 'in.amazon.mShop.android.shopping', 'color': Colors.blue, 'icon': Icons.shopping_bag},
+    {
+      'name': 'Google Pay',
+      'package': 'com.google.android.apps.nbu.paisa.user',
+      'color': Colors.blue,
+      'icon': Icons.g_mobiledata
+    },
+    {
+      'name': 'PhonePe',
+      'package': 'com.phonepe.app',
+      'color': Colors.purple,
+      'icon': Icons.phone_android
+    },
+    {
+      'name': 'Paytm',
+      'package': 'net.one97.paytm',
+      'color': Colors.blue,
+      'icon': Icons.currency_rupee
+    },
+    {
+      'name': 'BHIM',
+      'package': 'in.org.npci.upiapp',
+      'color': Colors.orange,
+      'icon': Icons.account_balance
+    },
+    {
+      'name': 'Amazon Pay',
+      'package': 'in.amazon.mShop.android.shopping',
+      'color': Colors.blue,
+      'icon': Icons.shopping_bag
+    },
   ];
 
   @override
@@ -49,18 +74,17 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
 
   Future<void> _loadSavedUpiIds() async {
     if (_customerId == null) return;
-    
+
     try {
       final doc = await FirebaseFirestore.instance
           .collection('customers')
           .doc(_customerId)
           .get();
-      
+
       if (doc.exists && doc.data()?.containsKey('savedUpiIds') == true) {
         setState(() {
-          _savedUpiIds = List<Map<String, dynamic>>.from(
-            doc.data()!['savedUpiIds'] ?? []
-          );
+          _savedUpiIds =
+              List<Map<String, dynamic>>.from(doc.data()!['savedUpiIds'] ?? []);
         });
       }
     } catch (e) {
@@ -107,7 +131,8 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
           children: [
             Text('Payment ID: ${response.paymentId}'),
             SizedBox(height: 8),
-            Text('Paid via: UPI', style: TextStyle(fontWeight: FontWeight.w500)),
+            Text('Paid via: UPI',
+                style: TextStyle(fontWeight: FontWeight.w500)),
           ],
         ),
         actions: [
@@ -194,7 +219,8 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
           children: [
             Text('Payment ID: $paymentId'),
             SizedBox(height: 8),
-            Text('Paid via: UPI', style: TextStyle(fontWeight: FontWeight.w500)),
+            Text('Paid via: UPI',
+                style: TextStyle(fontWeight: FontWeight.w500)),
           ],
         ),
         actions: [
@@ -211,7 +237,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
   void _scanQRCode() async {
     // First, check if we have camera permission
     // For demo, we'll show how it would work
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -340,7 +366,8 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Open ${app['name']}'),
-        content: Text('This would open the ${app['name']} app for payment.\n\nIn a real app, you would be redirected to the app to complete payment.'),
+        content: Text(
+            'This would open the ${app['name']} app for payment.\n\nIn a real app, you would be redirected to the app to complete payment.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -435,8 +462,8 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                 if (upiController.text.isNotEmpty) {
                   _saveUpiId(
                     upiController.text,
-                    nicknameController.text.isEmpty 
-                        ? 'My UPI' 
+                    nicknameController.text.isEmpty
+                        ? 'My UPI'
                         : nicknameController.text,
                     selectedApp,
                   );
@@ -688,7 +715,8 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: _upiApps.map((app) {
                       return GestureDetector(
-                        onTap: () => _openUpiApp(app), // TAPPABLE: Each app icon
+                        onTap: () =>
+                            _openUpiApp(app), // TAPPABLE: Each app icon
                         child: Column(
                           children: [
                             Container(
@@ -740,9 +768,10 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                 ),
               ),
               ..._savedUpiIds.map((upi) => GestureDetector(
-                onTap: () => _payWithSavedUpi(upi), // TAPPABLE: Each saved UPI
-                child: _buildSavedUpiCard(upi),
-              )),
+                    onTap: () =>
+                        _payWithSavedUpi(upi), // TAPPABLE: Each saved UPI
+                    child: _buildSavedUpiCard(upi),
+                  )),
             ],
 
             // Add First UPI ID (if none saved) - TAPPABLE
@@ -944,7 +973,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
       }
     });
     _saveUpiIdsToFirestore();
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Default UPI ID updated'),
@@ -958,7 +987,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
       _savedUpiIds.removeWhere((upi) => upi['id'] == upiId);
     });
     _saveUpiIdsToFirestore();
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('UPI ID removed'),
@@ -969,7 +998,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
 
   Future<void> _saveUpiIdsToFirestore() async {
     if (_customerId == null) return;
-    
+
     await FirebaseFirestore.instance
         .collection('customers')
         .doc(_customerId)

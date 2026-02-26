@@ -55,3 +55,7 @@ serviceAccountKey.json
 
 # Config files with API keys
 web/env.js
+
+# ML models (large binary files)
+*.keras
+Model/servus_model.keras

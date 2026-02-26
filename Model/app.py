@@ -2,6 +2,7 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+
 import os
 import json
 import math
@@ -12,6 +13,20 @@ from datetime import datetime
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+
+from fastapi import UploadFile, File
+from fastapi.responses import FileResponse
+import uuid
+
+
+import base64
+import tempfile
+
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.models import load_model
+from tensorflow.keras.preprocessing import image as keras_image
 from pydantic import BaseModel
 
 # NOTE: Heavy imports (torch, sentence_transformers, pandas, firebase, web3, genai)
@@ -30,12 +45,25 @@ db = None
 w3 = None
 blockchain_account = None
 WALLET_ADDRESS = None
-
+_image_model = None
+_image_model_ready = False
 # Two-phase readiness:
 # _ready = True  → Firebase/Gemini/Web3 loaded → login, bookings, etc. work
 # _ml_ready = True → ML model loaded → /analyze works
 _ready = False
 _ml_ready = False
+
+
+
+CLASS_NAMES = [
+    "electrician", "general_contractor", "plumber", "carpenter",
+    "computer_repair", "painter", "ac_technician", "specialized_services",
+    "home_automation", "cleaning", "mobile_repair", "welder",
+    "pest_control", "automobile_mechanic", "locksmith", "gas_technician",
+    "appliance_repair", "glazier", "solar_technician"
+]
+
+
 
 def _init_essential():
     """Phase 1: Firebase, Gemini, Web3 — lightweight, loads fast."""
@@ -48,10 +76,12 @@ def _init_essential():
     from web3 import Web3
 
     firestore = _firestore
-
     # Gemini
     genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
     gemini_model = genai.GenerativeModel("models/gemini-2.5-flash")
+    gemini_api_key = os.getenv("GEMINI_API_KEY")
+
+    print("Gemini API Key:", gemini_api_key)
     print("✅ Gemini ready!")
 
     # Firebase
@@ -115,6 +145,26 @@ def _init_ml():
     print("✅ ML model & embeddings ready!")
 
 
+def _init_image_model():
+    """Load the Keras image classification model at startup."""
+    global _image_model, _image_model_ready
+    try:
+        print("⚡ Loading image classification model...")
+
+        model_path = "servus_model.keras"
+        if not os.path.exists(model_path):
+            print(f"❌ Model file not found at: {os.path.abspath(model_path)}")
+            return
+
+        _image_model = load_model(model_path)
+        _image_model_ready = True
+        print("✅ Image model ready!")
+    except Exception as e:
+        print(f"❌ Image model failed to load: {e}")
+        import traceback
+        traceback.print_exc()
+
+
 def _init_in_background():
     global _ready, _ml_ready
 
@@ -139,7 +189,28 @@ def _init_in_background():
         import traceback
         traceback.print_exc()
 
+    _init_image_model()
+
+      # Phase 3: Image model (runs alongside or after ML)
+      
+
+
 threading.Thread(target=_init_in_background, daemon=True).start()
+
+
+
+
+
+
+# Call this alongside your existing _init_ml() in startup
+# e.g. threading.Thread(target=_init_image_model, daemon=True).start()
+
+
+# ── Request schema ──────────────────────────────────────────────────────────
+class ImageInput(BaseModel):
+    image: str       # base64 encoded image bytes
+    mime_type: str   # "image/png" or "image/jpeg"
+    problem: str     # optional text context, may be empty
 
 # -------------------------------
 # Verhoeff Checksum Algorithm (Aadhaar validation)
@@ -350,11 +421,101 @@ def generate_review_summary(worker_name: str, reviews: list) -> str:
     except Exception as e:
         print(f"❌ Gemini review summary error: {e}")
         return ""
+    
+
+def _predict_from_base64(base64_str: str, mime_type: str) -> tuple[str, float]:
+    """
+    Decodes base64 image, runs it through the Keras model,
+    returns (predicted_class, confidence_percentage).
+    """
+    # Decode base64 to raw bytes
+    image_bytes = base64.b64decode(base64_str)
+
+    # Write to a temp file so keras image.load_img can read it
+    ext = "jpg" if "jpeg" in mime_type else mime_type.split("/")[-1]
+    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{ext}") as tmp:
+        tmp.write(image_bytes)
+        tmp_path = tmp.name
+
+    try:
+        # Preprocess — same as your Jupyter code
+        img = keras_image.load_img(tmp_path, target_size=(224, 224))
+        img_array = keras_image.img_to_array(img)
+        img_array = tf.keras.applications.convnext.preprocess_input(img_array)
+        img_array = np.expand_dims(img_array, axis=0)
+
+        # Predict
+        prediction = _image_model.predict(img_array)
+        predicted_class = CLASS_NAMES[np.argmax(prediction)]
+        confidence = float(np.max(prediction) * 100)
+
+        print(f"📸 Image prediction: {predicted_class} ({confidence:.1f}%)")
+        print("All probabilities:", {k: f"{v*100:.1f}%" for k, v in zip(CLASS_NAMES, prediction[0])})
+
+        return predicted_class, confidence
+
+    finally:
+        os.unlink(tmp_path)  # always clean up temp file
+
+
 
 
 # -------------------------------
 # API Endpoint
 # -------------------------------
+
+# ── Endpoint ────────────────────────────────────────────────────────────────
+@app.post("/analyze-image")
+async def analyze_image(image_input: ImageInput):
+    if not _image_model_ready:
+        return {
+            "detected_category": "general_contractor",
+            "available_workers": [],
+            "quick_fix": "Image model is still loading. Please try again in a minute.",
+            "status": "ml_loading"
+        }
+
+    try:
+        best_category, confidence = _predict_from_base64(
+            image_input.image, image_input.mime_type
+        )
+    except Exception as e:
+        print(f"❌ Image prediction failed: {e}")
+        best_category = "general_contractor"
+        confidence = 0.0
+
+    # Reuse your existing helpers — same as /analyze
+    available_workers = get_workers_from_firestore(best_category)
+    quick_fix = generate_quick_fix(
+        image_input.problem if image_input.problem else f"Issue detected: {best_category}",
+        best_category
+    )
+
+    for worker in available_workers:
+        worker_id = worker.get('id', '')
+        if worker_id:
+            reviews = get_worker_reviews(worker_id)
+            if reviews:
+                worker['review_count'] = len(reviews)
+                worker['ai_review_summary'] = generate_review_summary(worker.get('name', 'Worker'), reviews)
+            else:
+                worker['review_count'] = 0
+                worker['ai_review_summary'] = ''
+        else:
+            worker['review_count'] = 0
+            worker['ai_review_summary'] = ''
+
+    return {
+        "detected_category": best_category,
+        "available_workers": available_workers,
+        "quick_fix": quick_fix,
+        "confidence": round(confidence, 1)  # bonus: send confidence back to frontend
+    }
+
+
+
+
+
 @app.post("/analyze")
 async def analyze(problem_input: ProblemInput):
     if not _ml_ready:

@@ -202,6 +202,62 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+
+  // ─── NEW: sends image (+ optional text) to your image model endpoint ───
+Future<void> _classifyIssueWithImage(Uint8List imageBytes, String description) async {
+  setState(() => _loading = true);
+
+  try {
+    final base64Image = base64Encode(imageBytes);
+    final ext = _selectedImageName?.split('.').last.toLowerCase() ?? 'jpg';
+    final mimeType = ext == 'png' ? 'image/png' : 'image/jpeg';
+
+    final response = await http.post(
+      Uri.parse("${ApiConfig().baseUrl}/analyze-image"),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'image': base64Image,
+        'mime_type': mimeType,
+        'problem': description, // optional text, can be empty string
+      }),
+    );
+
+    print("Sending image to backend, size: ${imageBytes.length} bytes");
+    print("Response: ${response.body}");
+
+    setState(() => _loading = false);
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SearchResultsPage(
+            searchQuery: description.isNotEmpty ? description : 'Image upload',
+            detectedCategory: data['detected_category'] ?? 'General',
+            quickFix: data['quick_fix'] ?? '',
+            workers: data['available_workers'] ?? [],
+          ),
+        ),
+      );
+    } else {
+      if (response.statusCode == 503) {
+        _showErrorDialog('Server is still starting up. Please try again in a minute.');
+      } else {
+        _showErrorDialog('Error: ${response.statusCode}');
+      }
+    }
+  } catch (e) {
+    setState(() => _loading = false);
+    _showErrorDialog(
+      'Could not reach the server. It may be waking up — please try again in a moment.',
+    );
+  }
+}
+
+
+
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
@@ -218,19 +274,28 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _handleFindHelp() {
-    print("Button pressed with text: ${_issueController.text}");
-    if (_issueController.text.trim().isNotEmpty || _selectedImageBytes != null) {
-      _classifyIssue(_issueController.text);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please describe your issue or upload an image'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
+// ─── MODIFIED: routes to image or text path ───
+void _handleFindHelp() {
+  final hasText = _issueController.text.trim().isNotEmpty;
+  final hasImage = _selectedImageBytes != null;
+
+  if (!hasText && !hasImage) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Please describe your issue or upload an image'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+    return;
   }
+
+  if (hasImage) {
+    // Image takes priority — text is sent along as optional context
+    _classifyIssueWithImage(_selectedImageBytes!, _issueController.text.trim());
+  } else {
+    _classifyIssue(_issueController.text.trim());
+  }
+}
 
   Future<void> _pickImage() async {
     try {
