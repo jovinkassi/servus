@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import '../services/worker_service.dart';
 import '../widgets/notification_overlay.dart';
+import '../../services/notification_service.dart';
 import 'worker_jobs.dart';
 import 'worker_chat_list_page.dart';
 import 'worker_schedule_screen.dart';
@@ -30,6 +31,8 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
   int _selectedNavIndex = 0;
   Uint8List? _profileImageBytes;
   List<Map<String, dynamic>> _recentBookings = [];
+  int _unreadCount = 0;
+  final NotificationService _notificationService = NotificationService();
 
   @override
   void initState() {
@@ -38,6 +41,48 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
       _workerService.setWorkerId(widget.workerId!);
     }
     _loadProfile();
+    _notificationService.addListener(_onNotification);
+    setState(() {
+      _unreadCount = _notificationService.unreadCount;
+    });
+  }
+
+  @override
+  void dispose() {
+    _notificationService.removeListener(_onNotification);
+    super.dispose();
+  }
+
+  void _onNotification(AppNotification _) {
+    setState(() {
+      _unreadCount = _notificationService.unreadCount;
+    });
+  }
+
+  void _showNotificationsModal() async {
+    final notifications = await _notificationService.getNotifications();
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierColor: Colors.transparent,
+      barrierDismissible: true,
+      builder: (context) => Align(
+        alignment: Alignment.topRight,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 72, right: 12),
+          child: Material(
+            color: Colors.transparent,
+            child: _WorkerNotificationsModal(
+              notifications: notifications,
+              onMarkAllRead: () async {
+                await _notificationService.markAllAsRead();
+                setState(() => _unreadCount = 0);
+              },
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _loadProfile() async {
@@ -264,16 +309,47 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                   ),
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(26),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.notifications_outlined,
-                          color: Colors.white,
-                          size: 24,
+                      GestureDetector(
+                        onTap: _showNotificationsModal,
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withAlpha(26),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              const Icon(
+                                Icons.notifications_outlined,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                              if (_unreadCount > 0)
+                                Positioned(
+                                  top: -4,
+                                  right: -4,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.redAccent,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    constraints: const BoxConstraints(
+                                        minWidth: 16, minHeight: 16),
+                                    child: Text(
+                                      _unreadCount > 9 ? '9+' : '$_unreadCount',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -978,6 +1054,197 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _WorkerNotificationsModal extends StatefulWidget {
+  final List<AppNotification> notifications;
+  final VoidCallback onMarkAllRead;
+
+  const _WorkerNotificationsModal({
+    required this.notifications,
+    required this.onMarkAllRead,
+  });
+
+  @override
+  State<_WorkerNotificationsModal> createState() =>
+      _WorkerNotificationsModalState();
+}
+
+class _WorkerNotificationsModalState extends State<_WorkerNotificationsModal> {
+  late List<AppNotification> _notifications;
+
+  @override
+  void initState() {
+    super.initState();
+    _notifications = widget.notifications;
+  }
+
+  IconData _iconForType(String type) {
+    switch (type) {
+      case 'new_booking': return Icons.work_outline;
+      case 'job_status_update': return Icons.update;
+      case 'payment': return Icons.payment;
+      default: return Icons.notifications_outlined;
+    }
+  }
+
+  Color _colorForType(String type) {
+    switch (type) {
+      case 'new_booking': return const Color(0xFF1E3A5F);
+      case 'job_status_update': return Colors.green;
+      case 'payment': return Colors.orange;
+      default: return Colors.blueGrey;
+    }
+  }
+
+  String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 300,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.55,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(40),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Notifications',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E3A5F),
+                  ),
+                ),
+                if (_notifications.any((n) => !n.read))
+                  TextButton(
+                    onPressed: () {
+                      widget.onMarkAllRead();
+                      setState(() {
+                        _notifications = _notifications
+                            .map((n) => AppNotification(
+                                  id: n.id,
+                                  title: n.title,
+                                  body: n.body,
+                                  type: n.type,
+                                  jobId: n.jobId,
+                                  createdAt: n.createdAt,
+                                  read: true,
+                                ))
+                            .toList();
+                      });
+                      Navigator.pop(context);
+                    },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: Size.zero,
+                    ),
+                    child: const Text(
+                      'Mark all read',
+                      style: TextStyle(color: Color(0xFF1E3A5F), fontSize: 12),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Flexible(
+            child: _notifications.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.notifications_none, size: 40, color: Colors.grey),
+                        SizedBox(height: 8),
+                        Text('No notifications yet',
+                            style: TextStyle(color: Colors.grey, fontSize: 13)),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    itemCount: _notifications.length,
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 1, indent: 56),
+                    itemBuilder: (context, index) {
+                      final n = _notifications[index];
+                      return ListTile(
+                        dense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
+                        leading: CircleAvatar(
+                          radius: 18,
+                          backgroundColor:
+                              _colorForType(n.type).withAlpha(26),
+                          child: Icon(_iconForType(n.type),
+                              color: _colorForType(n.type), size: 18),
+                        ),
+                        title: Text(
+                          n.title,
+                          style: TextStyle(
+                            fontWeight:
+                                n.read ? FontWeight.normal : FontWeight.bold,
+                            fontSize: 13,
+                            color: const Color(0xFF1E3A5F),
+                          ),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(n.body,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.black54)),
+                            Text(_timeAgo(n.createdAt),
+                                style: const TextStyle(
+                                    fontSize: 11, color: Colors.grey)),
+                          ],
+                        ),
+                        trailing: n.read
+                            ? null
+                            : Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF1E3A5F),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                        isThreeLine: true,
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }

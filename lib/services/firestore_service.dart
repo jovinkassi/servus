@@ -227,6 +227,40 @@ class FirestoreService {
       // Update worker's aggregate rating
       await _updateWorkerRating(workerId, rating);
 
+      // Notify worker about confirmation + payment
+      try {
+        final stars = '★' * rating.round() + '☆' * (5 - rating.round());
+        if (paymentId != null && amount != null) {
+          await _db
+              .collection('worker_notifications')
+              .doc(workerId)
+              .collection('notifications')
+              .add({
+            'title': 'Payment Received 💰',
+            'body': 'Customer paid ₹$amount and rated you $stars',
+            'type': 'payment',
+            'jobId': bookingId,
+            'read': false,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        } else {
+          await _db
+              .collection('worker_notifications')
+              .doc(workerId)
+              .collection('notifications')
+              .add({
+            'title': 'Job Confirmed ⭐',
+            'body': 'Customer confirmed the job and rated you $stars',
+            'type': 'job_status_update',
+            'jobId': bookingId,
+            'read': false,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        }
+      } catch (e) {
+        print('Error sending worker notification: $e');
+      }
+
       return true;
     } catch (e) {
       print('Error confirming completion: $e');
