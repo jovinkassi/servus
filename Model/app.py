@@ -137,7 +137,7 @@ def _init_ml():
     data['text'] = data['text'].str.lower()
 
     # Load Sentence Transformer
-    model_name = "all-mpnet-base-v2"
+    model_name = "all-MiniLM-L6-v2"
     print("⚡ Loading ML model...")
     model = SentenceTransformer(model_name)
 
