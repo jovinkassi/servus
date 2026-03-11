@@ -3,3 +3,7 @@
 .env
 
 serviceAccountKey.json
+
+*.keras
+Model_Training.ipynb
+image3.jpeg

@@ -25,8 +25,9 @@ import tempfile
 
 import numpy as np
 import tensorflow as tf
+import cv2
 from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image as keras_image
+from tensorflow.keras.applications.resnet50 import preprocess_input
 from pydantic import BaseModel
 
 # NOTE: Heavy imports (torch, sentence_transformers, pandas, firebase, web3, genai)
@@ -56,11 +57,11 @@ _ml_ready = False
 
 
 CLASS_NAMES = [
-    "electrician", "general_contractor", "plumber", "carpenter",
-    "computer_repair", "painter", "ac_technician", "specialized_services",
-    "home_automation", "cleaning", "mobile_repair", "welder",
-    "pest_control", "automobile_mechanic", "locksmith", "gas_technician",
-    "appliance_repair", "glazier", "solar_technician"
+    "ac_technician", "appliance_repair", "automobile_mechanic", "carpenter",
+    "cleaning", "computer_repair", "electrician", "gas_technician",
+    "general_contractor", "glazier", "home_automation", "locksmith",
+    "mobile_repair", "painter", "pest_control", "plumber",
+    "solar_technician", "specialized_services", "welder"
 ]
 
 
@@ -151,7 +152,7 @@ def _init_image_model():
     try:
         print("⚡ Loading image classification model...")
 
-        model_path = "servus_model.keras"
+        model_path = "ServiceClassification.keras"
         if not os.path.exists(model_path):
             print(f"❌ Model file not found at: {os.path.abspath(model_path)}")
             return
@@ -431,18 +432,19 @@ def _predict_from_base64(base64_str: str, mime_type: str) -> tuple[str, float]:
     # Decode base64 to raw bytes
     image_bytes = base64.b64decode(base64_str)
 
-    # Write to a temp file so keras image.load_img can read it
+    # Write to a temp file so cv2 can read it
     ext = "jpg" if "jpeg" in mime_type else mime_type.split("/")[-1]
     with tempfile.NamedTemporaryFile(delete=False, suffix=f".{ext}") as tmp:
         tmp.write(image_bytes)
         tmp_path = tmp.name
 
     try:
-        # Preprocess — same as your Jupyter code
-        img = keras_image.load_img(tmp_path, target_size=(224, 224))
-        img_array = keras_image.img_to_array(img)
-        img_array = tf.keras.applications.convnext.preprocess_input(img_array)
-        img_array = np.expand_dims(img_array, axis=0)
+        # Preprocess — same as Jupyter notebook (ResNet50)
+        img = cv2.imread(tmp_path)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = cv2.resize(img, (224, 224))
+        img_array = np.expand_dims(img, axis=0)
+        img_array = preprocess_input(img_array)
 
         # Predict
         prediction = _image_model.predict(img_array)
