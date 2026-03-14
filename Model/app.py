@@ -24,10 +24,16 @@ import base64
 import tempfile
 
 import numpy as np
-import tensorflow as tf
 import cv2
-from tensorflow.keras.models import load_model
-from tensorflow.keras.applications.resnet50 import preprocess_input
+
+def _resnet50_preprocess(img_array):
+    """ResNet50 preprocess_input (caffe mode): RGB → BGR, subtract ImageNet mean."""
+    x = img_array.astype('float32')
+    x = x[..., ::-1]  # RGB to BGR
+    x[..., 0] -= 103.939
+    x[..., 1] -= 116.779
+    x[..., 2] -= 123.68
+    return x
 from pydantic import BaseModel
 
 # NOTE: Heavy imports (torch, sentence_transformers, pandas, firebase, web3, genai)
@@ -157,6 +163,12 @@ def _init_image_model():
             print(f"❌ Model file not found at: {os.path.abspath(model_path)}")
             return
 
+        # Patch missing TF internal function required by keras 3.10
+        import tensorflow as tf
+        if not hasattr(tf.__internal__, 'register_load_context_function'):
+            tf.__internal__.register_load_context_function = lambda fn: None
+
+        from keras.models import load_model
         _image_model = load_model(model_path)
         _image_model_ready = True
         print("✅ Image model ready!")
@@ -455,7 +467,7 @@ def _predict_from_base64(base64_str: str, mime_type: str) -> tuple[str, float]:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = cv2.resize(img, (224, 224))
         img_array = np.expand_dims(img, axis=0)
-        img_array = preprocess_input(img_array)
+        img_array = _resnet50_preprocess(img_array)
 
         # Predict
         prediction = _image_model.predict(img_array)
