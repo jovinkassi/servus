@@ -272,7 +272,8 @@ async def check_ready(request: Request, call_next):
     if not _ready and request.url.path != "/health":
         return JSONResponse(
             status_code=503,
-            content={"error": "Server is still starting up. Please try again in a minute."}
+            content={"error": "Server is still starting up. Please try again in a minute."},
+            headers={"Access-Control-Allow-Origin": "*"}
         )
     return await call_next(request)
 
