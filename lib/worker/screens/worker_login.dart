@@ -62,7 +62,7 @@ class _WorkerLoginScreenState extends State<WorkerLoginScreen>
       final response = await http.post(
         Uri.parse('${ApiConfig().baseUrl}/worker/login?phone=$phone'),
         headers: {'Content-Type': 'application/json'},
-      );
+      ).timeout(const Duration(seconds: 90));
 
       if (response.statusCode == 503) {
         if (mounted) {
@@ -100,7 +100,7 @@ class _WorkerLoginScreenState extends State<WorkerLoginScreen>
       }
     } catch (e) {
       if (mounted) {
-        _showSnackBar('Connection error. Please try again.', isError: true);
+        _showSnackBar('Server is waking up. Please try again in a moment.', isError: true);
       }
     } finally {
       if (mounted) {
