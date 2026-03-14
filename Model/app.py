@@ -269,6 +269,16 @@ app.add_middleware(
 @app.middleware("http")
 async def check_ready(request: Request, call_next):
     """Block requests until Firebase is ready (except /health)."""
+    if request.method == "OPTIONS":
+        return JSONResponse(
+            status_code=200,
+            content={},
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "*",
+                "Access-Control-Allow-Headers": "*",
+            }
+        )
     if not _ready and request.url.path != "/health":
         return JSONResponse(
             status_code=503,
