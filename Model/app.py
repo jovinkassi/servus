@@ -1,4 +1,5 @@
 
+# Servus backend - FastAPI service
 from dotenv import load_dotenv
 load_dotenv()
 
