@@ -59,3 +59,7 @@ web/env.js
 # ML models (large binary files)
 *.keras
 Model/servus_model.keras
+
+# Local script files
+Model/test_model.py
+Model/train_model.py
