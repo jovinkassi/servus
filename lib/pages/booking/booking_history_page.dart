@@ -980,7 +980,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
       onError: (message) {
         if (!mounted) return;
 
-        // ⚡ FORCE SUCCESS EVEN IF PAYMENT FAILS OR USER CLOSES
+        // ⚡ FORCEe SUCCESS EVEN IF PAYMENT FAILS OR USER CLOSES
         _completeBooking(
           booking: booking,
           rating: rating,
