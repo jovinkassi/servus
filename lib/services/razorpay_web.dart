@@ -1,6 +1,7 @@
 // lib/services/razorpay_web.dart
 // Web implementation - uses dart:html to access Razorpay JS SDK
 // ignore_for_file: avoid_web_libraries_in_flutter
+import 'dart:async';
 import 'dart:html' as html;
 import 'dart:js' as js;
 
@@ -26,6 +27,8 @@ void openRazorpayWeb({
       return;
     }
 
+    bool paymentCompleted = false;
+
     final options = js.JsObject.jsify({
       'key': key,
       'amount': amount,
@@ -40,20 +43,31 @@ void openRazorpayWeb({
         'color': '#2196F3',
       },
       'handler': (dynamic response) {
+        paymentCompleted = true;
         final resp = js.JsObject.fromBrowserObject(response);
         final paymentId = resp['razorpay_payment_id']?.toString() ?? '';
         onSuccess(paymentId);
       },
     });
 
-    final modal = js.JsObject.jsify({});
-    modal['ondismiss'] = js.JsFunction.withThis((dynamic _) {
-      onError('Payment cancelled by user');
-    });
-    options['modal'] = modal;
-
     final razorpay = js.JsObject(razorpayConstructor as js.JsFunction, [options]);
     razorpay.callMethod('open');
+
+    // Poll DOM for modal close — works in both debug and release builds
+    // ondismiss JS callbacks are unreliable in Flutter web release mode
+    Timer(const Duration(seconds: 1), () {
+      Timer.periodic(const Duration(milliseconds: 500), (timer) {
+        if (paymentCompleted) {
+          timer.cancel();
+          return;
+        }
+        final container = html.document.querySelector('.razorpay-container');
+        if (container == null) {
+          timer.cancel();
+          onError('Payment cancelled by user');
+        }
+      });
+    });
   } catch (e) {
     onError('Failed to open Razorpay: $e');
   }
