@@ -149,7 +149,7 @@ def _init_ml():
     model = SentenceTransformer(model_name)
 
     print("⚡ Generating embeddings for dataset...")
-    data['embeddings'] = list(model.encode(data['text'], convert_to_tensor=True))
+    data['embeddings'] = list(model.encode(data['text'].tolist(), convert_to_tensor=True))
     print("✅ ML model & embeddings ready!")
 
 
