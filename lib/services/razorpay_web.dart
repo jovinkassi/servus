@@ -44,12 +44,13 @@ void openRazorpayWeb({
         final paymentId = resp['razorpay_payment_id']?.toString() ?? '';
         onSuccess(paymentId);
       },
-      'modal': {
-        'ondismiss': () {
-          onError('Payment cancelled by user');
-        },
-      },
     });
+
+    final modal = js.JsObject.jsify({});
+    modal['ondismiss'] = js.JsFunction.withThis((dynamic _) {
+      onError('Payment cancelled by user');
+    });
+    options['modal'] = modal;
 
     final razorpay = js.JsObject(razorpayConstructor as js.JsFunction, [options]);
     razorpay.callMethod('open');
